@@ -1,7 +1,11 @@
+baseURL = "https://garrypolley.com/"
 languageCode = "en-us"
 title = "Garry Polley"
 theme = "anatole"
 enableEmoji = true
+
+[context.deploy-preview]
+command = "hugo -b $DEPLOY_PRIME_URL"
 
 [permalinks]
   post = "/:year/:month/:day/:slug/"
