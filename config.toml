@@ -1,4 +1,27 @@
 baseURL = "https://garrypolley.com/"
 languageCode = "en-us"
 title = "Garry Polley"
-theme = "ananke"
+theme = "anatole"
+
+[permalinks]
+  post = "/:year/:month/:day/:slug/"
+
+[menu]
+
+[[menu.main]]
+name = "Home"
+identifier = "home"
+weight = 100
+url = "/"
+
+[[menu.main]]
+name = "Posts"
+weight = 200
+identifier = "posts"
+url = "/post/"
+
+[params]
+title = "🌭Garry Polley"
+author = "Garry Polley"
+description = "I make computers go"
+profilePicture = "images/garry-and-child.JPG"
