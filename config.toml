@@ -1,4 +1,3 @@
-baseURL = "https://garrypolley.com/"
 languageCode = "en-us"
 title = "Garry Polley"
 theme = "anatole"
@@ -37,3 +36,13 @@ url = "https://github.com/garrypolley/"
 icon = "fa-twitter"
 title = "Twitter"
 url = "https://twitter.com/garrypolley/"
+
+[[params.socialIcons]]
+icon = "fa-file"
+title = "Resume"
+url = "https://docs.google.com/document/d/1NT3KopYqebcJH9rV3D-gT1ie2CNhnbR8u01BIJDaWOU/"
+
+[[params.socialIcons]]
+icon = "fa-envelope"
+title = "Email"
+url = "mailto:garrympolley@gmail.com"
