@@ -100,4 +100,4 @@ func main() {
 ```
 [Run it on go playground](http://play.golang.org/p/N6BVTrE2_S) or see below.
 
-<iframe src="http://play.golang.org/p/N6BVTrE2_S" frameborder="0" style="width: 100%; height: 400px"><a href="http://play.golang.org/p/N6BVTrE2_S">see this code in play.golang.org</a></iframe>
+<iframe src="https://play.golang.org/p/N6BVTrE2_S" frameborder="0" style="width: 100%; height: 400px"><a href="https://play.golang.org/p/N6BVTrE2_S">see this code in play.golang.org</a></iframe>
