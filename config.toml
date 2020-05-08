@@ -1,0 +1,4 @@
+baseURL = "https://garrypolley.com/"
+languageCode = "en-us"
+title = "Garry Polley"
+theme = "ananke"
