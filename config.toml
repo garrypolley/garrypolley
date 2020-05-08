@@ -2,6 +2,7 @@ baseURL = "https://garrypolley.com/"
 languageCode = "en-us"
 title = "Garry Polley"
 theme = "anatole"
+enableEmoji = true
 
 [permalinks]
   post = "/:year/:month/:day/:slug/"
@@ -25,3 +26,14 @@ title = "🌭Garry Polley"
 author = "Garry Polley"
 description = "I make computers go"
 profilePicture = "images/garry-and-child.JPG"
+
+
+[[params.socialIcons]]
+icon = "fa-github"
+title = "GitHub"
+url = "https://github.com/garrypolley/"
+
+[[params.socialIcons]]
+icon = "fa-twitter"
+title = "Twitter"
+url = "https://twitter.com/garrypolley/"
