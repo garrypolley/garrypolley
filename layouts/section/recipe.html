@@ -3,12 +3,8 @@
 <p class="post">Checkout the recipes below. <a href="mailto:garrympolley+recipe-app@gmail.com">Let me know your thoughts.</a></p> 
 
 <ul class="list-with-title">
-  {{ range .RegularPagesRecursive }}
+  {{ range .Pages }}
     {{ .Render "li" }}
   {{ end }}
 </ul>
-
-{{if .PrevPage}}{{.PrevPage.Permalink}}{{end}} 
-
-{{if .NextInSection}}<h1>{{.Next.Permalink}} nexty</h1> {{end}}
 {{ end }}
