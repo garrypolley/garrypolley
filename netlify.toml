@@ -1,6 +1,7 @@
 [build]
 publish = "public"
 command = "hugo --gc --minify"
+build_dir = ""
 
 [[redirects]]
   from = "https://recipe.garrypolley.com/"
