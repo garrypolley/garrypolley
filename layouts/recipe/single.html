@@ -1,0 +1,31 @@
+{{ define "main" }}
+<section class="post">
+   <article class="post-content">
+    <h3>{{ .Title }}</h3>
+    <h6>{{ .Params.Short }}</h3>
+
+    {{with $img := .Params.Image}}
+    <img src="/images/recipe/{{$.Slug}}/{{$img}}" class="img--recipe" />
+    {{end}}
+
+    {{.Content}}
+
+    <ul class="posts">
+
+    {{with .Params.Ingredients}}
+        {{ range . }}
+            <li>{{ .name }} -- {{ .amount }}</li>
+        {{ end }}
+    {{end}}
+    </ul>
+
+    <ol class="posts">
+    {{with .Params.Steps}}
+        {{ range . }}
+            <li>{{ . }}</li>
+        {{ end }}
+    {{end}}
+    </ol>
+    </article>
+</section>
+{{ end }}

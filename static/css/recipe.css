@@ -1,0 +1,11 @@
+.thumbnail--recipe {
+    max-height: 200px;
+    border-radius: 16px;
+    width: auto;
+}
+
+.img--recipe {
+    max-height: 400px;
+    width: auto;
+    border-radius: 16px;
+}

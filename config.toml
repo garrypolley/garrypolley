@@ -4,8 +4,21 @@ title = "Garry Polley"
 theme = "anatole"
 enableEmoji = true
 
+[markup]
+  [markup.highlight]
+    codeFences = true
+    guessSyntax = false
+    hl_Lines = ""
+    lineNoStart = 1
+    lineNos = false
+    lineNumbersInTable = true
+    noClasses = true
+    style = "monokai"
+    tabWidth = 4
+
 [permalinks]
   post = "/:year/:month/:day/:slug/"
+  recipe = "/recipe/:slug/"
 
 [menu]
 
@@ -21,11 +34,18 @@ weight = 200
 identifier = "posts"
 url = "/post/"
 
+[[menu.main]]
+name = "Recipes"
+weight = 200
+identifier = "recipes"
+url = "/recipe/"
+
 [params]
 title = "🌭Garry Polley"
 author = "Garry Polley"
 description = "I make computers go"
 profilePicture = "images/garry-and-child.JPG"
+customCss = ["css/recipe.css"]
 
 
 [[params.socialIcons]]
