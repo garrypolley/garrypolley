@@ -36,9 +36,15 @@ url = "/post/"
 
 [[menu.main]]
 name = "Recipes"
-weight = 200
+weight = 300
 identifier = "recipes"
 url = "/recipe/"
+
+[[menu.main]]
+name = "Contact"
+weight = 400
+identifier = "contact"
+url = "/contact/"
 
 [params]
 title = "🌭Garry Polley"
