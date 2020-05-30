@@ -21,13 +21,13 @@ url = "/"
 [[menu.main]]
 name = "Posts"
 weight = 200
-identifier = "posts"
+identifier = "post"
 url = "/post/"
 
 [[menu.main]]
 name = "Recipes"
 weight = 300
-identifier = "recipes"
+identifier = "recipe"
 url = "/recipe/"
 
 [[menu.main]]
