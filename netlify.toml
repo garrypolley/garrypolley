@@ -4,9 +4,15 @@ command = "hugo --gc --minify"
 base = ""
 
 [[redirects]]
+  from = "https://blog.garrypolley.com/"
+  to = "https://garrypolley.com/post/"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "https://recipe.garrypolley.com/"
-  to = "https://recipe.garrypolley.com/recipe/"
-  status = 200
+  to = "https://garrypolley.com/recipe/"
+  status = 301
   force = true
 
 [context.deploy-preview]
