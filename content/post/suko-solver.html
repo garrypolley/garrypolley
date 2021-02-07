@@ -21,6 +21,30 @@ type: html
     justify-content: center;
     height: 50px;
 }
+.circle-con-four {
+    background-color: rgb(255, 208, 0);
+    border-radius: 50px;
+    height: 50px;
+    width: 50px;
+}
+.circle-con-three {
+    background-color: rgb(255, 145, 0);
+    border-radius: 50px;
+    height: 50px;
+    width: 50px;
+}
+.circle-con-two {
+    background-color: red;
+    border-radius: 50px;
+    height: 50px;
+    width: 50px;
+}
+.circle-nums {
+    float: left;
+    text-align: left;
+    width: 60px;
+    padding-top: 115px;
+}
 .w {
     position: relative;
     background-color: white;
@@ -93,6 +117,11 @@ We shall see if this post updates in the next few hours with a solver on screen 
 <label>z: <input name="z" id="zInput" type="number" value="26" /></label><br />
 <br />
 
+<label>m: <input name="m" id="mInput" type="number" value="19" /></label><br />
+<label>n: <input name="n" id="nInput" type="number" value="14" /></label><br />
+<label>o: <input name="o" id="oInput" type="number" value="12" /></label><br />
+<br />
+
 <label> aPrime: <input name="aPrime" id="aPrime" type="number" /></label><br/>
 <label> bPrime: <input name="bPrime" id="bPrime" type="number" /></label><br/>
 <label> cPrime: <input name="cPrime" id="cPrime" type="number" /></label><br/>
@@ -107,6 +136,12 @@ We shall see if this post updates in the next few hours with a solver on screen 
 <label> hPrime: <input name="hPrime" id="hPrime" type="number" /></label><br/>
 <label> iPrime: <input name="iPrime" id="iPrime" type="number" /></label><br/>
 <br />
+
+<div class="circle-nums">
+    <div class="m circle-con-four"><span class="circle-con"><span id="w">19</span></span></div> <br />
+    <div class="n circle-con-three"><span class="circle-con"><span id="w">14</span></span></div> <br />
+    <div class="o circle-con-two"><span class="circle-con"><span id="w">12</span></span></div>
+</div>
 
 <div>
 <table>
@@ -132,18 +167,48 @@ We shall see if this post updates in the next few hours with a solver on screen 
 </div>
 
 <script>
-var variables = {
+var choices = [1,2,3,4,5,6,7,8,9];
+
+var positionVariables = {
+    a: 0,
+    b: 0,
+    c: 0,
+    d: 0,
+    e: 0,
+    f: 0,
+    g: 0,
+    h: 0,
+    i: 0,
+};
+
+var knownVariables = {
     w: 11,
     x: 16,
     y: 18,
     z: 26,
+    m: 19,
+    n: 14,
+    o: 12,
 };
+
+var sums = {
+    m: [positionVariables['a'], positionVariables['b'], positionVariables['c'], positionVariables['f']],
+    n: [positionVariables['d'], positionVariables['e'], positionVariables['h']],
+    o: [positionVariables['g'], positionVariables['i']],
+};
+
+var boxSums = {
+    w: [positionVariables['a'], positionVariables['b'], positionVariables['d'], positionVariables['e']],
+    x: [positionVariables['b'], positionVariables['c'], positionVariables['e'], positionVariables['f']],
+    y: [positionVariables['d'], positionVariables['e'], positionVariables['g'], positionVariables['h']],
+    z: [positionVariables['e'], positionVariables['f'], positionVariables['h'], positionVariables['i']],
+}
 
 function setCircleValue(circleName) {
     return (event) => {
         var value = parseInt(event.target.value);
         var circleElement = document.querySelector('#' + circleName);
-        variables[circleName] = value;
+        knownVariables[circleName] = value;
         circleElement.innerHTML = '<span>' + value + '</span>';
     }
 }
