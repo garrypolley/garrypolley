@@ -1,0 +1,161 @@
+---
+title: "Suko Solver"
+date: 2021-02-07T09:47:26-06:00
+Description: ""
+Tags: []
+Categories: []
+DisableComments: false
+draft: false
+type: html
+---
+
+<style>
+.suko-cell {
+   height: 100px;
+   width: 100px;
+   background-color: black;
+}
+.circle-con {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 50px;
+}
+.w {
+    position: relative;
+    background-color: white;
+    border-radius: 50px;
+    height: 50px;
+    width: 50px;
+    top: 130px;
+    left: 80px;
+    z-index: 99;
+    display: inline-block;
+}
+.x {
+    position: relative;
+    background-color: white;
+    border-radius: 50px;
+    height: 50px;
+    width: 50px;
+    top: 130px;
+    left: 135px;
+    z-index: 99;
+    display: inline-block;
+}
+.y {
+    position: relative;
+    background-color: white;
+    border-radius: 50px;
+    height: 50px;
+    width: 50px;
+    top: 235px;
+    left: -20px;
+    z-index: 99;
+    display: inline-block;
+}
+.z {
+    position: relative;
+    background-color: white;
+    border-radius: 50px;
+    height: 50px;
+    width: 50px;
+    top: 235px;
+    left: 35px;
+    z-index: 99;
+    display: inline-block;
+}
+</style>
+
+<p>
+On this day in 2021 I was working on my weekend ritual of solving the Suko and Cell Blocks puzzles.
+I've wondered each weekend if there is a Suko puzzle. I finally wanted to check _after_ solving the puzzle
+to see if there was a solver. I grabbed my phone and searched the web. The internet seems to yield no
+obvious results. So here we are - I want to create a Suko solver. I'm working on this now. 
+</p>
+
+<p>
+We shall see if this post updates in the next few hours with a solver on screen 🤞...
+</p>
+
+<p>Work in progress still need to do the following:</p>
+
+<ul>
+    <li>Actually make it solve the puzzle</li>
+    <li>Add a "solve it" button</li>
+    <li>Allow assigning the 3 sets of known items: 4, 3, 2 sets of colors</li>
+    <li>Add the sets of colors to the UI</li>
+</ul>
+
+<label>w: <input name="w" id="wInput" type="number" value="11" /></label><br />
+<label>X: <input name="x" id="xInput" type="number" value="16" /></label><br />
+<label>y: <input name="y" id="yInput" type="number" value="18" /></label><br />
+<label>z: <input name="z" id="zInput" type="number" value="26" /></label><br />
+<br />
+
+<label> aPrime: <input name="aPrime" id="aPrime" type="number" /></label><br/>
+<label> bPrime: <input name="bPrime" id="bPrime" type="number" /></label><br/>
+<label> cPrime: <input name="cPrime" id="cPrime" type="number" /></label><br/>
+<label> dPrime: <input name="dPrime" id="dPrime" type="number" /></label><br/>
+<br />
+
+<label> ePrime: <input name="ePrime" id="ePrime" type="number" /></label><br/>
+<label> fPrime: <input name="fPrime" id="fPrime" type="number" /></label><br/>
+<label> gPrime: <input name="gPrime" id="gPrime" type="number" /></label><br/>
+<br />
+
+<label> hPrime: <input name="hPrime" id="hPrime" type="number" /></label><br/>
+<label> iPrime: <input name="iPrime" id="iPrime" type="number" /></label><br/>
+<br />
+
+<div>
+<table>
+<div class="w"><span class="circle-con"><span id="w">11</span></span></div>
+<div class="x"><span class="circle-con"><span id="x">16</span></span></div>
+<div class="y"><span class="circle-con"><span id="y">18</span></span></div>
+<div class="z"><span class="circle-con"><span id="z">26</span></span></div>
+
+<tr>
+    <td id="a" class="suko-cell"></td>  <td id="b" class="suko-cell"></td>  <td id="c" class="suko-cell"></td>
+</tr>
+
+<tr>
+    <td id="d" class="suko-cell"></td>  <td id="e" class="suko-cell"></td>  <td id="f" class="suko-cell"></td>
+</tr>
+
+<tr>
+    <td id="g" class="suko-cell"></td>  <td id="h" class="suko-cell"></td>  <td id="i" class="suko-cell"></td>
+</tr>
+
+</table>
+
+</div>
+
+<script>
+var variables = {
+    w: 11,
+    x: 16,
+    y: 18,
+    z: 26,
+};
+
+function setCircleValue(circleName) {
+    return (event) => {
+        var value = parseInt(event.target.value);
+        var circleElement = document.querySelector('#' + circleName);
+        variables[circleName] = value;
+        circleElement.innerHTML = '<span>' + value + '</span>';
+    }
+}
+
+var wInput = document.querySelector('#wInput');
+var xInput = document.querySelector('#xInput');
+var yInput = document.querySelector('#yInput');
+var zInput = document.querySelector('#zInput');
+
+wInput.addEventListener('change', setCircleValue('w'));
+xInput.addEventListener('change', setCircleValue('x'));
+yInput.addEventListener('change', setCircleValue('y'));
+zInput.addEventListener('change', setCircleValue('z'));
+
+</script>
