@@ -42,6 +42,7 @@ author = "Garry Polley"
 description = "I make computers go"
 profilePicture = "images/garry-and-child.JPG"
 customCss = ["css/recipe.css"]
+mainSections = ["post", "recipe"]
 
 
 [[params.socialIcons]]
