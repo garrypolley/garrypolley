@@ -102,53 +102,39 @@ obvious results. So here we are - I want to create a Suko solver. I'm working on
 We shall see if this post updates in the next few hours with a solver on screen 🤞...
 </p>
 
-<p>Work in progress still need to do the following:</p>
+<p>I did it -- the solution can be viewed by looking at this page source code, it's a brute force solve</p>
 
-<ul>
-    <li>Actually make it solve the puzzle</li>
-    <li>Add a "solve it" button</li>
-    <li>Allow assigning the 3 sets of known items: 4, 3, 2 sets of colors</li>
-    <li>Add the sets of colors to the UI</li>
-</ul>
+<p>I named the circles that are filled out with letters, for the circles in the middle of the puzzle it's w,x,y,z for those that list the color sums
+    those are m, n, and o.
+</p>
 
-<label>w: <input name="w" id="wInput" type="number" value="11" /></label><br />
-<label>X: <input name="x" id="xInput" type="number" value="16" /></label><br />
-<label>y: <input name="y" id="yInput" type="number" value="18" /></label><br />
-<label>z: <input name="z" id="zInput" type="number" value="26" /></label><br />
+<p>
+    To assign colors click the colored circle to the left and then select the squares that corrspond. Very little error handling has been created.
+    A page refresh might be needed if it seems off.
+</p>
+
+<label>w: <input name="w" id="wInput" type="number" value="" /></label><br />
+<label>x: <input name="x" id="xInput" type="number" value="" /></label><br />
+<label>y: <input name="y" id="yInput" type="number" value="" /></label><br />
+<label>z: <input name="z" id="zInput" type="number" value="" /></label><br />
 <br />
 
-<label>m: <input name="m" id="mInput" type="number" value="19" /></label><br />
-<label>n: <input name="n" id="nInput" type="number" value="14" /></label><br />
-<label>o: <input name="o" id="oInput" type="number" value="12" /></label><br />
-<br />
-
-<label> aPrime: <input name="aPrime" id="aPrime" type="number" /></label><br/>
-<label> bPrime: <input name="bPrime" id="bPrime" type="number" /></label><br/>
-<label> cPrime: <input name="cPrime" id="cPrime" type="number" /></label><br/>
-<label> dPrime: <input name="dPrime" id="dPrime" type="number" /></label><br/>
-<br />
-
-<label> ePrime: <input name="ePrime" id="ePrime" type="number" /></label><br/>
-<label> fPrime: <input name="fPrime" id="fPrime" type="number" /></label><br/>
-<label> gPrime: <input name="gPrime" id="gPrime" type="number" /></label><br/>
-<br />
-
-<label> hPrime: <input name="hPrime" id="hPrime" type="number" /></label><br/>
-<label> iPrime: <input name="iPrime" id="iPrime" type="number" /></label><br/>
-<br />
+<label>m: <input name="m" id="mInput" type="number" value="" /></label><br />
+<label>n: <input name="n" id="nInput" type="number" value="" /></label><br />
+<label>o: <input name="o" id="oInput" type="number" value="" /></label><br />
 
 <div class="circle-nums">
-    <div class="m circle-con-four"><span class="circle-con"><span id="w">19</span></span></div> <br />
-    <div class="n circle-con-three"><span class="circle-con"><span id="w">14</span></span></div> <br />
-    <div class="o circle-con-two"><span class="circle-con"><span id="w">12</span></span></div>
+    <div id="mOption" class="m circle-con-four"><span class="circle-con"><span id="m"></span>(m)</span></div> <br />
+    <div id="nOption" class="n circle-con-three"><span class="circle-con"><span id="n"></span>(n)</span></div> <br />
+    <div id="oOption" class="o circle-con-two"><span class="circle-con"><span id="o"></span>(o)</span></div>
 </div>
 
 <div>
-<table>
-<div class="w"><span class="circle-con"><span id="w">11</span></span></div>
-<div class="x"><span class="circle-con"><span id="x">16</span></span></div>
-<div class="y"><span class="circle-con"><span id="y">18</span></span></div>
-<div class="z"><span class="circle-con"><span id="z">26</span></span></div>
+<table style="text-align: center;">
+<div class="w"><span class="circle-con"><span id="w"></span>(w)</span></div>
+<div class="x"><span class="circle-con"><span id="x"></span>(x)</span></div>
+<div class="y"><span class="circle-con"><span id="y"></span>(y)</span></div>
+<div class="z"><span class="circle-con"><span id="z"></span>(z)</span></div>
 
 <tr>
     <td id="a" class="suko-cell"></td>  <td id="b" class="suko-cell"></td>  <td id="c" class="suko-cell"></td>
@@ -166,44 +152,9 @@ We shall see if this post updates in the next few hours with a solver on screen 
 
 </div>
 
+<button id="solve">Solve</button>
+
 <script>
-var choices = [1,2,3,4,5,6,7,8,9];
-
-var positionVariables = {
-    a: 0,
-    b: 0,
-    c: 0,
-    d: 0,
-    e: 0,
-    f: 0,
-    g: 0,
-    h: 0,
-    i: 0,
-};
-
-var knownVariables = {
-    w: 11,
-    x: 16,
-    y: 18,
-    z: 26,
-    m: 19,
-    n: 14,
-    o: 12,
-};
-
-var sums = {
-    m: [positionVariables['a'], positionVariables['b'], positionVariables['c'], positionVariables['f']],
-    n: [positionVariables['d'], positionVariables['e'], positionVariables['h']],
-    o: [positionVariables['g'], positionVariables['i']],
-};
-
-var boxSums = {
-    w: [positionVariables['a'], positionVariables['b'], positionVariables['d'], positionVariables['e']],
-    x: [positionVariables['b'], positionVariables['c'], positionVariables['e'], positionVariables['f']],
-    y: [positionVariables['d'], positionVariables['e'], positionVariables['g'], positionVariables['h']],
-    z: [positionVariables['e'], positionVariables['f'], positionVariables['h'], positionVariables['i']],
-}
-
 function setCircleValue(circleName) {
     return (event) => {
         var value = parseInt(event.target.value);
@@ -222,5 +173,191 @@ wInput.addEventListener('change', setCircleValue('w'));
 xInput.addEventListener('change', setCircleValue('x'));
 yInput.addEventListener('change', setCircleValue('y'));
 zInput.addEventListener('change', setCircleValue('z'));
+
+var mInput = document.querySelector('#mInput');
+var nInput = document.querySelector('#nInput');
+var oInput = document.querySelector('#oInput');
+
+mInput.addEventListener('change', setCircleValue('m'));
+nInput.addEventListener('change', setCircleValue('n'));
+oInput.addEventListener('change', setCircleValue('o'));
+
+// Once values are set we should setout the options
+// Input by user
+var knownVariables = {
+    w: 11,
+    x: 16,
+    y: 18,
+    z: 26,
+    m: 19,
+    n: 14,
+    o: 12,
+};
+
+// Created by selecting which boxes correspond to each of the colors
+
+var sums = {
+    w: ['a', 'b', 'd', 'e'],
+    x: ['b', 'c', 'e', 'f'],
+    y: ['d', 'e', 'g', 'h'],
+    z: ['e', 'f', 'h', 'i'],
+    m: [],
+    n: [],
+    o: [],
+};
+
+var positionVariables = {
+    a: 0,
+    b: 0,
+    c: 0,
+    d: 0,
+    e: 0,
+    f: 0,
+    g: 0,
+    h: 0,
+    i: 0,
+};
+
+function sumOptions(array) {
+    var sum = 0;
+    for (var i = 0; i < array.length; i++) {
+        sum += positionVariables[array[i]];
+    }
+    return sum;
+}
+
+function verifySum(array, expectedValue) {
+    return sumOptions(array) === expectedValue;
+}
+
+function verifySums(key) {
+    return verifySum(sums[key], knownVariables[key]);
+}
+
+// Verify Puzzle
+function verifyPuzzle() {
+    var sumsValidArray = Object.keys(sums).map((key) => {
+        return verifySums(key);
+    });
+
+    return sumsValidArray.every((item) => item === true);
+}
+
+
+// Create a permutation generator
+// https://stackoverflow.com/a/20871714/1686511
+
+function permutator(inputArr) {
+  var result = [];
+
+  function permute (arr, m = []) {
+    if (arr.length === 0) {
+      result.push(m)
+    } else {
+      for (var i = 0; i < arr.length; i++) {
+        var curr = arr.slice();
+        var next = curr.splice(i, 1);
+        permute(curr.slice(), m.concat(next))
+     }
+   }
+ }
+
+ permute(inputArr)
+
+ return result;
+}
+
+function solve() {
+    var foundResult = false;
+    var loops = 0;
+
+    var allOptions = permutator([1,2,3,4,5,6,7,8,9]);
+
+    for (var i = 0; i < allOptions.length; i++) {
+
+        if (!foundResult) {
+            var currentOptions = allOptions[i];
+
+            positionVariables['a'] = currentOptions[0];
+            positionVariables['b'] = currentOptions[1];
+            positionVariables['c'] = currentOptions[2];
+            positionVariables['d'] = currentOptions[3];
+            positionVariables['e'] = currentOptions[4];
+            positionVariables['f'] = currentOptions[5];
+            positionVariables['g'] = currentOptions[6];
+            positionVariables['h'] = currentOptions[7];
+            positionVariables['i'] = currentOptions[8];
+
+            foundResult = verifyPuzzle();
+        }
+        loops++;
+    }
+
+    if (!foundResult) {
+        alert('Failed to find a result for entered data. Sorry.');
+    } else {
+        Object.keys(positionVariables).forEach((key) => {
+            console.log(key);
+            var element = document.querySelector(`#${key}`);
+            element.innerHTML = positionVariables[key];
+            console.log(element);
+        });
+
+        console.log(`Solved the puzzle: ${positionVariables}`);
+    }
+}
+
+var solveButton = document.querySelector('#solve');
+
+solveButton.addEventListener('click', solve);
+
+// Setup click handlers for the "m" "n" "o"
+var mCircle = document.querySelector('#mOption');
+var nCircle = document.querySelector('#nOption');
+var oCircle = document.querySelector('#oOption');
+
+var currentCircle = null;
+
+document.querySelectorAll('td').forEach((element) => {
+    element.addEventListener('click', (event) => {
+        // Do nothing if there is no circle
+        if (currentCircle === null) {
+            return;
+        }
+
+        // Setup the sums
+        var cell = event.target;
+        var selectedSquare = cell.id;
+
+        if (currentCircle === 'm') {
+            sums['m'].push(selectedSquare);
+            cell.style.backgroundColor = 'rgb(255, 208, 0)';
+            sums['n'] = sums['n'].filter(item => item !== selectedSquare);
+            sums['o'] = sums['o'].filter(item => item !== selectedSquare);
+        } else if (currentCircle === 'n') {
+            sums['n'].push(selectedSquare);
+            cell.style.backgroundColor = 'rgb(255, 145, 0)';
+            sums['m'] = sums['m'].filter(item => item !== selectedSquare);
+            sums['o'] = sums['o'].filter(item => item !== selectedSquare);
+        } else if (currentCircle === 'o') {
+            sums['o'].push(selectedSquare);
+            cell.style.backgroundColor = 'red';
+            sums['n'] = sums['n'].filter(item => item !== selectedSquare);
+            sums['m'] = sums['m'].filter(item => item !== selectedSquare);
+        }
+    });
+});
+
+mCircle.addEventListener('click', (event) => {
+    currentCircle = 'm';
+});
+
+nCircle.addEventListener('click', (event) => {
+    currentCircle = 'n';
+});
+
+oCircle.addEventListener('click', (event) => {
+    currentCircle = 'o';
+});
 
 </script>
