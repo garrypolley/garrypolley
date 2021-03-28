@@ -33,9 +33,25 @@ everything compiles to the M1 ARM architecture out of the box. For that I've
 followed some steps to suppor the x86 architecture.
 
 1. `brew` - this is the [hombrew install](https://brew.sh/) at `/opt/homebrew` (default on M1 now)
+1. `volta` - Followed [install docs](https://docs.volta.sh/guide/) on the volta site
 1. `ibrew` - to suppport x86 only brew installs [thanks diewland](https://diewland.medium.com/how-to-install-python-3-7-on-macbook-m1-87c5b0fcb3b5)
 1. `python3` (Pyton 3.8) - used normal `brew install python`
 1. `python3` (Python 3.7) - needed to support x86 `ibrew install python@3.7`
 1. `hugo` - this was straight forward `brew install hugo`
 1. `git` - installed by doing `brew install git`
+1. `zshell` - install with the [random script from the internet](https://ohmyz.sh/)
+
+## General Notes
+
+I started using the `.zprofile`. Previously I've used the `.zshrc`. So far so good with the `.zprofile`:
+
+```sh
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+export VOLTA_HOME=$HOME/.volta
+export PATH="$VOLTA_HOME/bin:$PATH"
+
+
+alias ibrew="arch -x86_64 /usr/local/bin/brew"
+```
 
