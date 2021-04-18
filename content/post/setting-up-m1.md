@@ -40,6 +40,8 @@ followed some steps to suppor the x86 architecture.
 1. `hugo` - this was straight forward `brew install hugo`
 1. `git` - installed by doing `brew install git`
 1. `zshell` - install with the [random script from the internet](https://ohmyz.sh/)
+1. `docker` - download the latest preview
+1. `jupyter notebook` - need to do this file modification while also using Docker: https://towardsdatascience.com/how-to-run-jupyter-notebooks-on-an-apple-m1-mac-ac3a8bf39c6c
 
 ## General Notes
 
