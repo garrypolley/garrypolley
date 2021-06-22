@@ -1,0 +1,71 @@
+<style>
+table { 
+    border-spacing: 10px;
+    border-collapse: separate;
+}
+
+tbody tr:nth-child(odd){
+  background-color: #22b937;
+  color: #fff;
+}
+</style>
+
+<form id="updateTableForm">
+    <label>Times First:</label>
+    <input id="xOption" type="number" />
+    <br />
+    <label>Times Second:</label>
+    <input id="yOption" type="number" />
+
+    <button type="submit">Update</button>
+</form>
+
+<table id="timesTable">
+</table>
+
+<script>
+    var starterX = 12;
+    var starterY = 12;
+    const form = document.getElementById('updateTableForm');
+
+    function computeTable() {
+        var xNode = document.getElementById('xOption');
+        var yNode = document.getElementById('yOption');
+        var xOption = parseInt(xNode && xNode.value) || starterX;
+        var yOption = parseInt(yNode && yNode.value) || starterY;
+        var rows =  xOption;
+        var columns = yOption;
+        var tableText = '<table>';
+
+        for (var i = 0; i <= rows; i++) {
+            if (i===0) {
+                continue;
+            }
+            tableText += `<tr>`
+            for (var j = 0; j <= columns; j++) {
+                if (j=== 0) {
+                    continue;
+                }
+                tableText += `<td>${i*j}</td>`;
+            }
+            tableText += '</tr>';
+        }
+        tableText += '</table>';
+        return tableText;
+    }
+
+    function updateTable(event) {
+        event && event.preventDefault();
+        var tableHtml = computeTable();
+        var element = document.getElementById('timesTable');
+        element.innerHTML = tableHtml;
+    }
+
+    updateTable()
+
+    form.onsubmit = updateTable;
+
+    document.getElementById('xOption').value = 12;
+    document.getElementById('yOption').value = 12;
+</script>
+
