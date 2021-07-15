@@ -15,5 +15,11 @@ base = ""
   status = 301
   force = true
 
+[[redirects]]
+  from = "https://garrypolley.com/polley-house"
+  to = "https://polley-house-pics.netlify.app/about/"
+  status = 200
+  force = true
+
 [context.deploy-preview]
 command = "hugo -b $DEPLOY_PRIME_URL"
