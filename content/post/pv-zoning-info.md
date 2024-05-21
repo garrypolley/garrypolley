@@ -7,7 +7,7 @@ Categories: []
 DisableComments: false
 ---
 
-As of May-20-2024 there are three places to better understand the current zoning plans in Prairie Village Kansas. As well as how they differ from today. After the links below you'll see my understanding and summary in a table.
+As of May-20-2024 there are three places to better understand the current zoning plans in Prairie Village Kansas, as well as how they differ from today. After the links below you'll see my understanding and summary.
 
 * [Pages 8 - 72](https://www.pvkansas.com/home/showpublisheddocument/13484/638503281329300000) from meetings of the May 7th 2024 Planning Commission Agenda
 * [Current Zoning Laws](https://library.municode.com/ks/prairie_village/codes/code_of_ordinances?nodeId=CHXIXZORE_CH19.27ZODIUS)
@@ -29,18 +29,18 @@ Mostly C-2 with a little C-0 across the street.
 ![pv shops](/images/pv-zoning-info/pv_shops.png)
 
 ## Corinth Square -- "Blended Commercial"
-A decent mix of zones. Largely C-2 with some existing C-0. A little bit of C-1 and a smattering of residential zone out the edges.
+A decent mix of zones. Largely C-2 with some existing C-0. A little bit of C-1 and a smattering of residential zones at the edges.
 
 ![corinth square](/images/pv-zoning-info/corinth_square.png)
 
 ## 89th &amp; 90th Street near Franklin Park -- "Neighborhood Commercial" 
-This setup is interesting. It is kind of a sandwich. The north "bun" is C-2, CP-1, and a sliver of C-0.  The south "bun" is C-2 and C-1, with a sliver of C-0. The middle of the sandwich RP-1A (residential).
+This setup is interesting, like a sandwich. The north "bun" is C-2, CP-1, and a sliver of C-0.  The south "bun" is C-2 and C-1, with a sliver of C-0. The middle of the sandwich is RP-1A (residential).
 
 ![90th Street Zone](/images/pv-zoning-info/90th_street.png)
 
 # What exists today?
 
-Today we have a pretty straight forward way our zones can be used.  Essentially the R-* districts allow building of houses/apartments/etc for folks to live in. Within the requirements for each. Something that is not well known is that C-0 (a commercial zone) already allows for residential building _today_ provided it meets the residential requirements that already exist.
+Essentially the R-* districts allow building of houses/apartments/condos etc. for folks to live in. Each of the R-* having their own minor differences with what can be built. Something that is not well known is C-0 (a commercial zone) already allows for residential building _today_ provided it meets the residential requirements that already exist, for the building type. For example if a single family home is built on C-0 it must adhere to the R1-A single family zoning requirements.
 
 Here's a nice chart [from the existing codes](https://library.municode.com/ks/prairie_village/codes/code_of_ordinances?nodeId=CHXIXZORE_CH19.27ZODIUS_19.27.010ALUS). 
 
@@ -59,9 +59,11 @@ We see the gist of the proposed changes:
 
 ![proposed zone changes](/images/pv-zoning-info/proposed_changes.png)
 
-There are also a some "changes" around front yard, side yard, and rear yard sizes. Generally our existing codes are the same or very close to the same with regards to the size of these 3 areas. Maximum height is the other part "changing". However, it's not really changing. Both current and proposed **limit to 35 feet**. With the ability to file plans with the planning commission (same as today) to get an exemption.
+There are also a some "changes" around front yard, side yard, and rear yard sizes. Generally our existing codes are the same or very close to the same with regards to the size of these 3 areas. 
 
-The main change I see is in the C-2 type (since it's the most used of the commercial zones) to allow for residential use. [Page 72](https://www.pvkansas.com/home/showpublisheddocument/13484/638503281329300000) 19.20.010. part d states the following:
+Maximum height is the other part "changing". However, it's not really changing. Both current and proposed **limit to 35 feet**. With the ability to file plans with the planning commission (same as today) to get an exemption.
+
+The main change I see is in the C-2 type to allow for residential use. [Page 72](https://www.pvkansas.com/home/showpublisheddocument/13484/638503281329300000) 19.20.010. part d states the following:
 
 > (d) Residential uses shall be limited to dwelling units on upper stories above
 ground level commercial uses, or less than 50% of the ground floor and
@@ -77,7 +79,7 @@ District R-3.
 
 # What does this mean for Prairie Village?
 
-Honestly -- minor changes to the code. The buildings can't be larger than they are today. Added residential _must_ adhere to existing R-* zoning requirements. With green space requirements of C-2 residential matching that of existing C-2 requirements.  
+Honestly -- minor changes to the code. The buildings can't be larger than they are today. Added residential _must_ adhere to existing R-* zoning requirements. And residential added to C-2 must adhere to green space requirements of C-2 zoning. 
 
 You may be asking -- What about parking? Well, as far as I can tell there are no changes to the codes for that. This means they'll fall under our [current parking codes](https://library.municode.com/ks/prairie_village/codes/code_of_ordinances?nodeId=CHXIXZORE_CH19.46OREPALORE). Given the 3 areas potentially impacted, there is plenty of existing unused parking.
 
