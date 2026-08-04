@@ -55,6 +55,9 @@ hugo --gc --minify  # production-like build → public/
 - Permalinks: `/:year/:month/:day/:slug/`
 - Images: put under `static/images/<slug-or-topic>/…` and reference as `/images/...`
 - Interactive bits use shortcodes in `layouts/shortcodes/` (e.g. `{{< timesTable >}}`, `{{< sukoSolver >}}`, `{{< googleGroup id="…" >}}`, `{{< googleslide id="…" >}}`)
+- If a post was written with AI assistance (Cursor, voice-to-text into an agent, etc.), end it with this line so that's clear:
+
+  `*Post written with AI assistance.*`
 
 ### Recipes (`content/recipe/`)
 
