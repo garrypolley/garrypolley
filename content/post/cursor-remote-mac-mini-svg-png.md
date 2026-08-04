@@ -6,7 +6,7 @@ Description: "Using Cursor on a Mac mini from my phone, and a small SVG to PNG t
 Tags: []
 Categories: []
 DisableComments: false
-draft: true
+draft: false
 ---
 
 I needed to turn SVGs into PNGs for Slack and texts. So I told Cursor on my phone (talking to a Mac mini at home) to add a Tools section to this site and build an in-browser converter.
@@ -32,3 +32,5 @@ Try it:
 {{< svgToPng >}}
 
 garrympolley+svg@gmail.com
+
+*Post written with AI assistance.*
