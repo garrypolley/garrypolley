@@ -9,6 +9,8 @@ DisableComments: false
 draft: true
 ---
 
+Quick note up front: I prompted Cursor to take all the screenshots of the site/pages locally for this post. That is awesome.
+
 I keep needing to share an SVG in places that won't take an SVG. Slack. Text messages. Stuff like that. They want a PNG.
 
 So I made a page where I can paste the SVG (or pick a file), convert it in the browser, and download the PNG.
