@@ -26,4 +26,6 @@ A page refresh might be needed if it seems off.
 
 Finally clicking solve will try to solve -- it pops up an alert if it fails for any reason
 
+This also lives under [Tools → Suko Solver](/tool/suko-solver/) with the rest of the in-browser tools.
+
 {{< sukoSolver >}}
