@@ -27,12 +27,16 @@ I've been using Cursor as a remote agent against a Mac mini I leave on at home. 
 
 1. The Mac mini is the always-on machine with the repo, tools, git, and browser bits ready
 1. I open the Cursor iOS app
-1. I prompt from wherever I am
+1. I talk (or type) from wherever I am — a lot of my prompts start as voice-to-text on the phone
 1. The agent does the local work on the mini — edits, commits, PRs, even poking at the live site
 
-That setup changes the shape of "quick idea" work for me. I don't need to be at a desk with a full IDE open to knock out a small utility. I can notice the Slack/SVG problem, open the phone app, and describe what I want.
+That setup changes the shape of "quick idea" work for me. I don't need to be at a desk with a full IDE open to knock out a small utility. I can notice the Slack/SVG problem, open the phone app, and just talk through what I want.
 
-In this case the prompt was basically: add a Tools section to my Hugo site, pull the old Suko solver into it, and make an in-browser SVG → PNG converter that supports paste _and_ file upload.
+You can also run more than one agent at a time. Here's the iOS Live Activity from while I was writing this — one agent planning this post from a voice prompt, and another grinding on a side project:
+
+![Cursor iOS Live Activity showing two agents on the Mac mini](/images/cursor-remote-svg-png/ios-live-activity-agents.png)
+
+In this case the site prompt was basically: add a Tools section to my Hugo site, pull the old Suko solver into it, and make an in-browser SVG → PNG converter that supports paste _and_ file upload.
 
 A bit later I had a PR, a deploy preview, and then the tool on the live site.
 
