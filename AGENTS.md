@@ -9,7 +9,8 @@ Personal Hugo site for Garry Polley. Live at https://garrypolley.com. Source: ht
   - Build: `hugo --gc --minify`
   - Publish dir: `public`
   - Deploy previews: `hugo -b $DEPLOY_PRIME_URL`
-  - Production currently reports Hugo **0.85.0**; pin with `HUGO_VERSION` in `netlify.toml`
+  - Deploy previews / branch deploys use `hugo -D` so draft posts are reviewable on Netlify preview URLs
+- Production build stays `hugo --gc --minify` (drafts excluded)
 - **DNSimple** for DNS
 - No GitHub Actions / `.github` workflows — Netlify is CI/CD
 - Contact form is a **Netlify Forms** form (`data-netlify="true"` on `content/contact.html`)
