@@ -38,10 +38,11 @@ hugo --gc --minify  # production-like build → public/
 | `config.toml` | Site config, menus, permalinks, theme params |
 | `content/post/` | Blog posts (Markdown) |
 | `content/recipe/` | Recipes (Markdown + structured front matter) |
+| `content/tool/` | In-browser web tools (Markdown + shortcodes/JS) |
 | `content/contact.html`, `thank-you.html` | Contact + form success (HTML content pages) |
-| `layouts/` | Theme overrides (recipe templates + shortcodes) |
-| `static/` | CSS, images, favicon (copied as-is) |
-| `archetypes/` | `hugo new` templates for post/recipe |
+| `layouts/` | Theme overrides (recipe/tool templates + shortcodes) |
+| `static/` | CSS, images, JS, favicon (copied as-is) |
+| `archetypes/` | `hugo new` templates for post/recipe/tool |
 | `netlify.toml` | Build command, redirects, preview base URL |
 
 ## Content conventions
@@ -61,6 +62,15 @@ hugo --gc --minify  # production-like build → public/
 - Image path expectation: `static/images/recipe/<slug>/<image>` (see `layouts/recipe/single.html` and `li.html`)
 - Permalinks: `/recipe/:slug/`
 - Custom CSS: `static/css/recipe.css` (wired via `params.customCss`)
+
+### Tools (`content/tool/`)
+
+- Prefer `hugo new tool/my-slug.md` (uses `archetypes/tool.md`)
+- Front matter: `title`, `slug`, `date`, `short`, `draft`
+- Permalinks: `/tool/:slug/`
+- Keep interactive UI in shortcodes and/or `static/js/` + `static/css/tool.css`
+- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`)
+- Tools are navigable via the Tools menu; they are not included in `mainSections` (home feed)
 
 ### Contact
 

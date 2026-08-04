@@ -9,6 +9,7 @@ pygmentsUseClasses = false  # Add inline styles, no need to compile extra CSS
 [permalinks]
   post = "/:year/:month/:day/:slug/"
   recipe = "/recipe/:slug/"
+  tool = "/tool/:slug/"
 
 [menu]
 
@@ -31,6 +32,12 @@ identifier = "recipe"
 url = "/recipe/"
 
 [[menu.main]]
+name = "Tools"
+weight = 350
+identifier = "tool"
+url = "/tool/"
+
+[[menu.main]]
 name = "Contact"
 weight = 400
 identifier = "contact"
@@ -41,7 +48,7 @@ title = "🌭Garry Polley"
 author = "Garry Polley"
 description = "I make computers go"
 profilePicture = "images/garry-and-child.JPG"
-customCss = ["css/recipe.css"]
+customCss = ["css/recipe.css", "css/tool.css"]
 mainSections = ["post", "recipe"]
 
 

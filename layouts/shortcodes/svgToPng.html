@@ -1,0 +1,38 @@
+<div class="tool svg-to-png" id="svgToPngTool">
+  <div class="tool-field">
+    <label for="svgPaste">Paste SVG</label>
+    <textarea id="svgPaste" rows="12" placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; ...>...</svg>"></textarea>
+  </div>
+
+  <div class="tool-field">
+    <label for="svgFile">Or upload an SVG file</label>
+    <input id="svgFile" type="file" accept=".svg,image/svg+xml" />
+  </div>
+
+  <div class="tool-field tool-field--inline">
+    <label for="pngScale">Scale</label>
+    <input id="pngScale" type="number" min="0.25" max="8" step="0.25" value="1" />
+    <span class="tool-hint">1 = original size</span>
+  </div>
+
+  <div class="tool-actions">
+    <button type="button" id="svgConvert">Convert to PNG</button>
+    <button type="button" id="svgDownload" disabled>Download PNG</button>
+    <button type="button" id="svgClear" class="tool-button--secondary">Clear</button>
+  </div>
+
+  <p id="svgStatus" class="tool-status" role="status" aria-live="polite"></p>
+
+  <div class="tool-preview">
+    <div>
+      <h4>SVG preview</h4>
+      <div id="svgPreview" class="tool-preview-box"></div>
+    </div>
+    <div>
+      <h4>PNG preview</h4>
+      <div id="pngPreview" class="tool-preview-box"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/svg-to-png.js"></script>
