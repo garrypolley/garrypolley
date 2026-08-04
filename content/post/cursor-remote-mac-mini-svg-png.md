@@ -9,41 +9,26 @@ DisableComments: false
 draft: true
 ---
 
-Quick note up front: I prompted Cursor to take all the screenshots of the site/pages locally for this post. That is awesome.
-
-I keep needing to share an SVG in places that won't take an SVG. Slack. Text messages. Stuff like that. They want a PNG.
-
-So I made a page where I can paste the SVG (or pick a file), convert it in the browser, and download the PNG.
+I needed to turn SVGs into PNGs for Slack and texts. So I told Cursor on my phone (talking to a Mac mini at home) to add a Tools section to this site and build an in-browser converter.
 
 https://garrypolley.com/tool/svg-to-png/
 
-![Tools section on garrypolley.com](/images/cursor-remote-svg-png/tools-index.png)
+![Tools section](/images/cursor-remote-svg-png/tools-index.png)
 
-What I actually want to write about though is how I built it.
+Paste or upload an SVG, convert it, download the PNG. Runs in the browser.
 
-I've got a Mac mini at home that stays on. Cursor runs there. I use the Cursor app on my phone, often with voice to text, and tell it what I want. The agent works on the mini — editing files, making commits, opening PRs, that kind of thing.
+![Converter](/images/cursor-remote-svg-png/svg-to-png-converted.png)
 
-I don't have to sit down at a computer to do a small site change. I can just talk to the phone.
+Also moved the old [Suko solver](/tool/suko-solver/) into Tools.
 
-You can run more than one agent at once too. Here's what that looked like on my phone while I was working on this. One agent is this post (from a voice prompt). The other is a side project:
+The Mac mini stays on with Cursor. I use the iOS app, usually voice to text. It edits, commits, opens PRs. I can run more than one agent at a time:
 
-![Cursor iOS Live Activity showing two agents on the Mac mini](/images/cursor-remote-svg-png/ios-live-activity-agents.png)
+![Two agents from my phone](/images/cursor-remote-svg-png/ios-live-activity-agents.png)
 
-For the site I asked it to add a Tools section, move the old Suko solver over there, and build an SVG to PNG converter that works with paste or a file upload. A while later it was up.
+Cursor took the site screenshots for this post locally. Awesome.
 
-The converter itself is plain on purpose. Paste or upload, hit convert, download the PNG. It all stays in the browser.
-
-![SVG to PNG after converting a sample](/images/cursor-remote-svg-png/svg-to-png-converted.png)
-
-![Close-up of the converter UI](/images/cursor-remote-svg-png/svg-to-png-tool-closeup.png)
-
-There's a Tools page now with:
-
-- [SVG to PNG](/tool/svg-to-png/)
-- [Suko Solver](/tool/suko-solver/) from [this older post](/2021/02/07/suko-solver/)
-
-Try the converter below if you want:
+Try it:
 
 {{< svgToPng >}}
 
-Let me know what you think: garrympolley+svg@gmail.com
+garrympolley+svg@gmail.com
