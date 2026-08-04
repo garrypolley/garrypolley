@@ -1,0 +1,84 @@
+# Agent guide — garrypolley.com
+
+Personal Hugo site for Garry Polley. Live at https://garrypolley.com. Source: https://github.com/garrypolley/garrypolley.
+
+## Stack & deploy
+
+- **Hugo** static site, theme **anatole** (git submodule: `themes/anatole` → https://github.com/garrypolley/anatole.git)
+- **Netlify** site `garrypolley` builds on push to `master`
+  - Build: `hugo --gc --minify`
+  - Publish dir: `public`
+  - Deploy previews: `hugo -b $DEPLOY_PRIME_URL`
+  - Production currently reports Hugo **0.85.0**; pin with `HUGO_VERSION` in `netlify.toml`
+- **DNSimple** for DNS
+- No GitHub Actions / `.github` workflows — Netlify is CI/CD
+- Contact form is a **Netlify Forms** form (`data-netlify="true"` on `content/contact.html`)
+
+Redirects in `netlify.toml`:
+
+- `blog.garrypolley.com` → `/post/`
+- `recipe.garrypolley.com` → `/recipe/`
+- `/polley-house` → `polley-house-pics.netlify.app` (proxy, 200)
+
+## Local setup
+
+```bash
+git submodule update --init
+brew install hugo   # or install Hugo ~0.85 to match Netlify
+hugo server         # http://localhost:1313
+hugo --gc --minify  # production-like build → public/
+```
+
+`public/` is gitignored. Always init the submodule before building — without `themes/anatole` the site will not render.
+
+## Repo layout
+
+| Path | Role |
+|------|------|
+| `config.toml` | Site config, menus, permalinks, theme params |
+| `content/post/` | Blog posts (Markdown) |
+| `content/recipe/` | Recipes (Markdown + structured front matter) |
+| `content/contact.html`, `thank-you.html` | Contact + form success (HTML content pages) |
+| `layouts/` | Theme overrides (recipe templates + shortcodes) |
+| `static/` | CSS, images, favicon (copied as-is) |
+| `archetypes/` | `hugo new` templates for post/recipe |
+| `netlify.toml` | Build command, redirects, preview base URL |
+
+## Content conventions
+
+### Posts (`content/post/`)
+
+- Prefer `hugo new post/my-slug.md` (uses `archetypes/default.md`)
+- Typical front matter: `title`, `date`, optional `Description`, `Tags`, `Categories`, `DisableComments`, `draft`
+- Permalinks: `/:year/:month/:day/:slug/`
+- Images: put under `static/images/<slug-or-topic>/…` and reference as `/images/...`
+- Interactive bits use shortcodes in `layouts/shortcodes/` (e.g. `{{< timesTable >}}`, `{{< sukoSolver >}}`, `{{< googleGroup id="…" >}}`, `{{< googleslide id="…" >}}`)
+
+### Recipes (`content/recipe/`)
+
+- Prefer `hugo new recipe/my-slug.md` (uses `archetypes/recipe.md`)
+- Front matter drives the page: `ingredients` (`name` / `amount`), `steps`, `image`, `short`, `slug`
+- Image path expectation: `static/images/recipe/<slug>/<image>` (see `layouts/recipe/single.html` and `li.html`)
+- Permalinks: `/recipe/:slug/`
+- Custom CSS: `static/css/recipe.css` (wired via `params.customCss`)
+
+### Contact
+
+- Keep Netlify form attributes (`name="contact"`, `data-netlify="true"`, honeypot) if editing the form
+- Success page: `/thank-you/`
+
+## What to change carefully
+
+- Do not replace or vendor the theme into this repo; update the submodule pointer instead
+- Do not remove Netlify redirects without a reason — old subdomains and `/polley-house` still matter
+- `config.toml` `baseURL` is the production URL; preview builds override via Netlify context
+- HTML content pages need `[security] allowContent` to include `text/html` on newer Hugo; keep that when changing security config
+- Some posts include raw HTML; `[markup.goldmark.renderer] unsafe = true` is required for correct rendering on modern Hugo
+
+## Useful checks
+
+```bash
+hugo --gc --minify          # must succeed before considering a change done
+hugo server                 # spot-check post/recipe/contact locally
+git submodule status        # theme should be checked out, not empty
+```

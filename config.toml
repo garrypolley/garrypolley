@@ -64,3 +64,11 @@ url = "https://docs.google.com/document/d/1NT3KopYqebcJH9rV3D-gT1ie2CNhnbR8u01BI
 icon = "fa-envelope"
 title = "Email"
 url = "mailto:garrympolley@gmail.com"
+
+# HTML content pages (contact.html, thank-you.html) need an explicit allow on newer Hugo.
+[security]
+  allowContent = ['(?i)text/(css|javascript|markdown|x-.*|plain|html)']
+
+# Some posts embed raw HTML; keep Goldmark permissive.
+[markup.goldmark.renderer]
+  unsafe = true
