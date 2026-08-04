@@ -13,3 +13,6 @@ $RECYCLE.BIN/
 
 # Brex
 brex/
+
+# Local Netlify folder
+.netlify
