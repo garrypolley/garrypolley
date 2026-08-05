@@ -1,20 +1,20 @@
 <div class="tool interest-return" id="interestReturnTool">
   <div class="tool-modes" role="tablist" aria-label="Calculator mode">
-    <button type="button" class="tool-mode is-active" role="tab" aria-selected="true" data-mode="growth">Growth</button>
-    <button type="button" class="tool-mode" role="tab" aria-selected="false" data-mode="compare">Simple vs compound</button>
-    <button type="button" class="tool-mode" role="tab" aria-selected="false" data-mode="savings">Savings APR</button>
-    <button type="button" class="tool-mode" role="tab" aria-selected="false" data-mode="stepped">Stepped rates</button>
+    <button type="button" class="tool-mode is-active" role="tab" id="irTabGrowth" aria-controls="irPanelGrowth" aria-selected="true" tabindex="0" data-mode="growth">Growth</button>
+    <button type="button" class="tool-mode" role="tab" id="irTabCompare" aria-controls="irPanelCompare" aria-selected="false" tabindex="-1" data-mode="compare">Simple vs compound</button>
+    <button type="button" class="tool-mode" role="tab" id="irTabSavings" aria-controls="irPanelSavings" aria-selected="false" tabindex="-1" data-mode="savings">Savings APR</button>
+    <button type="button" class="tool-mode" role="tab" id="irTabStepped" aria-controls="irPanelStepped" aria-selected="false" tabindex="-1" data-mode="stepped">Stepped rates</button>
   </div>
 
   <div class="tool-panels">
-    <div class="tool-panel is-active" data-panel="growth" role="tabpanel">
+    <div class="tool-panel is-active" id="irPanelGrowth" data-panel="growth" role="tabpanel" aria-labelledby="irTabGrowth">
       <div class="tool-field tool-field--inline">
         <label for="irGrowthPrincipal">Principal ($)</label>
-        <input id="irGrowthPrincipal" type="number" min="0" step="100" value="25000" />
+        <input id="irGrowthPrincipal" type="number" min="0" max="1000000000000" step="100" value="25000" />
       </div>
       <div class="tool-field tool-field--inline">
         <label for="irGrowthRate">Annual return (%)</label>
-        <input id="irGrowthRate" type="number" min="0" step="0.1" value="3" />
+        <input id="irGrowthRate" type="number" min="0" max="100" step="0.1" value="3" />
       </div>
       <div class="tool-field tool-field--inline">
         <label for="irGrowthYears">Years</label>
@@ -31,14 +31,14 @@
       </div>
     </div>
 
-    <div class="tool-panel" data-panel="compare" role="tabpanel" hidden>
+    <div class="tool-panel" id="irPanelCompare" data-panel="compare" role="tabpanel" aria-labelledby="irTabCompare" hidden>
       <div class="tool-field tool-field--inline">
         <label for="irComparePrincipal">Principal ($)</label>
-        <input id="irComparePrincipal" type="number" min="0" step="100" value="25000" />
+        <input id="irComparePrincipal" type="number" min="0" max="1000000000000" step="100" value="25000" />
       </div>
       <div class="tool-field tool-field--inline">
         <label for="irCompareRate">Annual rate (%)</label>
-        <input id="irCompareRate" type="number" min="0" step="0.1" value="3" />
+        <input id="irCompareRate" type="number" min="0" max="100" step="0.1" value="3" />
       </div>
       <div class="tool-field tool-field--inline">
         <label for="irCompareYears">Years</label>
@@ -47,14 +47,14 @@
       <p class="tool-hint">Compares simple interest (no compounding) with yearly compounding on the same principal and rate.</p>
     </div>
 
-    <div class="tool-panel" data-panel="savings" role="tabpanel" hidden>
+    <div class="tool-panel" id="irPanelSavings" data-panel="savings" role="tabpanel" aria-labelledby="irTabSavings" hidden>
       <div class="tool-field tool-field--inline">
         <label for="irSavingsPrincipal">Principal ($)</label>
-        <input id="irSavingsPrincipal" type="number" min="0" step="100" value="10000" />
+        <input id="irSavingsPrincipal" type="number" min="0" max="1000000000000" step="100" value="10000" />
       </div>
       <div class="tool-field tool-field--inline">
         <label for="irSavingsApr">APR (%)</label>
-        <input id="irSavingsApr" type="number" min="0" step="0.01" value="3.7" />
+        <input id="irSavingsApr" type="number" min="0" max="100" step="0.01" value="3.7" />
       </div>
       <div class="tool-field tool-field--inline">
         <label for="irSavingsCompound">Compounding</label>
@@ -71,10 +71,10 @@
       <p class="tool-hint">APR is the stated annual rate. APY includes compounding and is shown in the results.</p>
     </div>
 
-    <div class="tool-panel" data-panel="stepped" role="tabpanel" hidden>
+    <div class="tool-panel" id="irPanelStepped" data-panel="stepped" role="tabpanel" aria-labelledby="irTabStepped" hidden>
       <div class="tool-field tool-field--inline">
         <label for="irSteppedPrincipal">Principal ($)</label>
-        <input id="irSteppedPrincipal" type="number" min="0" step="100" value="25000" />
+        <input id="irSteppedPrincipal" type="number" min="0" max="1000000000000" step="100" value="25000" />
       </div>
       <p class="tool-hint">Model slower early returns, then higher rates later. Periods use calendar years from year 1.</p>
       <div id="irSteppedPeriods" class="tool-periods" aria-label="Rate periods"></div>
@@ -89,7 +89,7 @@
   <div id="irSummary" class="tool-summary" aria-live="polite"></div>
 
   <div class="tool-chart-wrap">
-    <canvas id="irChart" width="720" height="360" aria-label="Balance over time chart"></canvas>
+    <canvas id="irChart" width="720" height="360" role="img" aria-label="Balance over time chart"></canvas>
   </div>
 
   <div class="tool-actions">

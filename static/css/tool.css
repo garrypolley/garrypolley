@@ -145,7 +145,7 @@
   margin: 0 0 1.25rem;
 }
 
-.tool-mode {
+.tool button.tool-mode {
   cursor: pointer;
   padding: 0.4rem 0.75rem;
   border: 1px solid #999;
@@ -155,10 +155,15 @@
   font: inherit;
 }
 
-.tool-mode.is-active {
+.tool button.tool-mode.is-active {
   background: #222;
   border-color: #222;
   color: #fff;
+}
+
+.tool button.tool-mode:focus-visible {
+  outline: 2px solid #2660ab;
+  outline-offset: 2px;
 }
 
 .tool-panel[hidden] {
