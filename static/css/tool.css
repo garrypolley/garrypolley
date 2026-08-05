@@ -121,3 +121,119 @@
   height: auto;
   display: block;
 }
+
+.tool-field select {
+  width: 100%;
+  max-width: 40rem;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.tool-field--inline select {
+  width: auto;
+  min-width: 9rem;
+  max-width: none;
+}
+
+.tool-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1.25rem;
+}
+
+.tool-mode {
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #999;
+  border-radius: 4px;
+  background: #f5f5f5;
+  color: #222;
+  font: inherit;
+}
+
+.tool-mode.is-active {
+  background: #222;
+  border-color: #222;
+  color: #fff;
+}
+
+.tool-panel[hidden] {
+  display: none !important;
+}
+
+.tool-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.tool-summary-item {
+  min-width: 0;
+}
+
+.tool-summary-label {
+  display: block;
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 0.15rem;
+}
+
+.tool-summary-value {
+  display: block;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #222;
+  word-break: break-word;
+}
+
+.tool-chart-wrap {
+  width: 100%;
+  max-width: 48rem;
+  margin: 0.5rem 0 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.tool-chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 16rem;
+}
+
+.tool-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.tool-period-row .tool-field--inline {
+  margin-bottom: 0;
+}
+
+.tool-period-row input[type="number"] {
+  width: 4.5rem;
+}
+
+.tool-period-remove {
+  margin-left: 0.25rem;
+}
+
+@media (max-width: 719px) {
+  .tool-mode {
+    flex: 1 1 calc(50% - 0.4rem);
+    text-align: center;
+  }
+
+  .tool-period-row .tool-field--inline {
+    align-items: flex-start;
+  }
+}
