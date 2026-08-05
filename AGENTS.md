@@ -73,7 +73,7 @@ hugo --gc --minify  # production-like build → public/
 - Front matter: `title`, `slug`, `date`, `short`, `draft`
 - Permalinks: `/tool/:slug/`
 - Keep interactive UI in shortcodes and/or `static/js/` + `static/css/tool.css`
-- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`)
+- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`)
 - Tools are navigable via the Tools menu; they are not included in `mainSections` (home feed)
 
 ### Contact
@@ -95,5 +95,6 @@ hugo --gc --minify  # production-like build → public/
 hugo --gc --minify          # must succeed before considering a change done
 hugo server                 # spot-check post/recipe/contact locally
 git submodule status        # theme should be checked out, not empty
-node scripts/smoke-svg-to-png.js   # SVG→PNG helper smoke tests
+node scripts/smoke-svg-to-png.js       # SVG→PNG helper smoke tests
+node scripts/smoke-interest-return.js  # Interest Return calculator smoke tests
 ```

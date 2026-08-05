@@ -16,3 +16,6 @@ brex/
 
 # Local Netlify folder
 .netlify
+
+# Local agent artifacts / screenshots
+.cursor-artifacts/
