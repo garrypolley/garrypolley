@@ -15,6 +15,15 @@ Personal Hugo site for Garry Polley. Live at https://garrypolley.com. Source: ht
 - No GitHub Actions / `.github` workflows — Netlify is CI/CD
 - Contact form is a **Netlify Forms** form (`data-netlify="true"` on `content/contact.html`)
 
+### Preview URLs (important)
+
+When sharing a Netlify deploy preview with the user:
+
+- Use **exactly** the URL Netlify reports — usually the `netlify/garrypolley/deploy-preview` status `target_url` on the PR (e.g. `https://deploy-preview-N--garrypolley.netlify.app`).
+- Do **not** invent hosts, rewrite the subdomain, or append path segments (`/tool/...`, `/post/...`, etc.) when giving “the preview URL.”
+- Point people at that root preview link; they can use the site nav (Home / Posts / Recipes / Tools / Contact) from there.
+- Production remains `https://garrypolley.com` after merge to `master`.
+
 Redirects in `netlify.toml`:
 
 - `blog.garrypolley.com` → `/post/`
