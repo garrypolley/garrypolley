@@ -298,9 +298,13 @@
 
 .ss-live {
   box-sizing: border-box;
-  height: 7.25rem;
+  display: grid;
+  grid-template-rows: 1.5rem 1.5rem 2.4rem;
+  align-content: start;
+  gap: 0.2rem;
+  height: 7.5rem;
   margin-bottom: 0.85rem;
-  padding: 0.75rem 0.9rem;
+  padding: 0.7rem 0.9rem;
   border: 1px solid var(--ss-line);
   border-radius: 6px;
   background: linear-gradient(180deg, #f7f9fb 0%, #eef2f6 100%);
@@ -309,21 +313,24 @@
 
 .ss-scoreboard {
   box-sizing: border-box;
-  min-height: 5.25rem;
+  height: 5.25rem;
   margin-bottom: 0.85rem;
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--ss-line);
   border-radius: 6px;
   background: #fff;
+  overflow: hidden;
 }
 
 .ss-score-main {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem 1.25rem;
   margin-bottom: 0.55rem;
+  min-height: 2.1rem;
+  overflow: hidden;
 }
 
 .ss-score-pair {
@@ -387,13 +394,15 @@
 
 .ss-live-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.65rem;
-  margin-bottom: 0.25rem;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .ss-live-label {
-  min-width: 3.2rem;
+  flex: 0 0 3.2rem;
   color: var(--ss-muted);
   font-size: 0.85rem;
   font-weight: 600;
@@ -401,23 +410,50 @@
   letter-spacing: 0.03em;
 }
 
+.ss-live-word,
+.ss-live-sum {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ss-live-word {
-  font-size: 1.35rem;
   letter-spacing: 0.08em;
   color: var(--ss-ink);
 }
 
 .ss-live-sum {
-  font-size: 1.35rem;
   color: var(--ss-accent);
   font-variant-numeric: tabular-nums;
 }
 
 .ss-live-eq {
-  margin: 0.4rem 0 0;
+  box-sizing: border-box;
+  margin: 0;
+  min-width: 0;
   color: var(--ss-muted);
-  font-size: 0.92rem;
-  word-break: break-word;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sumswipe .tool-status {
+  box-sizing: border-box;
+  height: 2.7em;
+  min-height: 2.7em;
+  margin: 0.5rem 0 1rem;
+  overflow: hidden;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .ss-board-wrap {

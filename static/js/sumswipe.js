@@ -923,8 +923,7 @@ if (typeof module !== "undefined" && module.exports) {
       total == null ? "—" : mult > 1 ? total + " (" + mult + "×)" : String(total);
 
     if (!forward) {
-      els.liveEq.textContent =
-        "Drag or use arrows + Space. Enter submits. Esc clears. Reuse a tile for 2×/3×.";
+      els.liveEq.textContent = "Drag letters · Space adds · Enter submits · Esc clears";
       return;
     }
 
