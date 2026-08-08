@@ -77,6 +77,27 @@ var SumSwipeUtils = (function () {
     return dr <= 1 && dc <= 1;
   }
 
+  /**
+   * How a tap/click on `index` should affect an existing path.
+   * start | extend | backtrack | noop | restart
+   */
+  function pathTapAction(path, index, size) {
+    if (!Array.isArray(path) || path.length === 0) {
+      return "start";
+    }
+    var last = path[path.length - 1];
+    if (index === last) {
+      return "noop";
+    }
+    if (path.length >= 2 && index === path[path.length - 2]) {
+      return "backtrack";
+    }
+    if (areAdjacent(last, index, size)) {
+      return "extend";
+    }
+    return "restart";
+  }
+
   function countTileVisits(indices) {
     var counts = {};
     if (!Array.isArray(indices)) {
@@ -618,6 +639,7 @@ var SumSwipeUtils = (function () {
     indexToRowCol: indexToRowCol,
     rowColToIndex: rowColToIndex,
     areAdjacent: areAdjacent,
+    pathTapAction: pathTapAction,
     countTileVisits: countTileVisits,
     pathMultiplier: pathMultiplier,
     wordPathScore: wordPathScore,
@@ -674,6 +696,12 @@ if (typeof module !== "undefined" && module.exports) {
     path: [],
     dragging: false,
     pointerId: null,
+    dragMoved: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    gestureChangedPath: false,
+    lastTapTime: 0,
+    lastTapIndex: -1,
     focusIndex: 0,
   };
 
@@ -803,7 +831,7 @@ if (typeof module !== "undefined" && module.exports) {
     els.blurb.textContent =
       "Daily puzzle for " +
       formatDisplayDate(state.dateKey) +
-      ". Find words (A=1…Z=26). Reuse one tile for 2×/3×. Rating is 0–9 on a log scale.";
+      ". Find words (A=1…Z=26). Click or drag to build a path; double-tap the last letter to submit.";
     els.progress.textContent =
       foundWordCount() +
       " word" +
@@ -835,7 +863,7 @@ if (typeof module !== "undefined" && module.exports) {
     if (!entries.length) {
       var empty = document.createElement("li");
       empty.className = "ss-found-empty";
-      empty.textContent = "No words yet — drag a path and release.";
+      empty.textContent = "No words yet — click or drag a path, then double-tap the end.";
       els.foundList.appendChild(empty);
       return;
     }
@@ -912,7 +940,8 @@ if (typeof module !== "undefined" && module.exports) {
       total == null ? "—" : mult > 1 ? total + " (" + mult + "×)" : String(total);
 
     if (!forward) {
-      els.liveEq.textContent = "Drag letters · Space adds · Enter submits · Esc clears";
+      els.liveEq.textContent =
+        "Click or drag · tap next letter to extend · double-tap end to submit";
       return;
     }
 
@@ -978,6 +1007,8 @@ if (typeof module !== "undefined" && module.exports) {
 
   function clearPath() {
     state.path = [];
+    state.lastTapTime = 0;
+    state.lastTapIndex = -1;
     highlightPath();
   }
 
@@ -1184,12 +1215,16 @@ if (typeof module !== "undefined" && module.exports) {
     return best;
   }
 
+  var DOUBLE_TAP_MS = 400;
+  var DRAG_MOVE_PX = 10;
+
   function extendPath(index) {
     if (index < 0 || index >= state.puzzle.grid.length) {
       return;
     }
     if (state.path.length === 0) {
       state.path.push(index);
+      state.focusIndex = index;
       highlightPath();
       return;
     }
@@ -1200,6 +1235,7 @@ if (typeof module !== "undefined" && module.exports) {
     // Backtrack only by returning to the immediate previous tile.
     if (state.path.length >= 2 && index === state.path[state.path.length - 2]) {
       state.path.pop();
+      state.focusIndex = state.path[state.path.length - 1];
       highlightPath();
       return;
     }
@@ -1214,7 +1250,23 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
     state.path.push(index);
+    state.focusIndex = index;
     highlightPath();
+  }
+
+  function applyTapToPath(index) {
+    var action = utils.pathTapAction(state.path, index, state.puzzle.size);
+    if (action === "restart") {
+      state.path = [];
+      extendPath(index);
+      return;
+    }
+    if (action === "noop") {
+      state.focusIndex = index;
+      highlightPath();
+      return;
+    }
+    extendPath(index);
   }
 
   function endDrag() {
@@ -1223,7 +1275,33 @@ if (typeof module !== "undefined" && module.exports) {
     }
     state.dragging = false;
     state.pointerId = null;
-    tryCommitPath();
+  }
+
+  function noteTap(index, moved) {
+    if (moved || index < 0) {
+      state.lastTapTime = 0;
+      state.lastTapIndex = -1;
+      return false;
+    }
+    var now = Date.now();
+    var isDouble =
+      now - state.lastTapTime <= DOUBLE_TAP_MS && index === state.lastTapIndex;
+    state.lastTapTime = now;
+    state.lastTapIndex = index;
+    if (!isDouble) {
+      return false;
+    }
+    // Double-tap the current path end to submit.
+    if (
+      state.path.length >= utils.MIN_WORD_LEN &&
+      index === state.path[state.path.length - 1]
+    ) {
+      state.lastTapTime = 0;
+      state.lastTapIndex = -1;
+      tryCommitPath();
+      return true;
+    }
+    return false;
   }
 
   function onPointerDown(e) {
@@ -1240,7 +1318,10 @@ if (typeof module !== "undefined" && module.exports) {
     e.preventDefault();
     state.dragging = true;
     state.pointerId = e.pointerId;
-    state.path = [];
+    state.dragMoved = false;
+    state.dragStartX = e.clientX;
+    state.dragStartY = e.clientY;
+    state.gestureChangedPath = false;
     if (els.grid.setPointerCapture) {
       try {
         els.grid.setPointerCapture(e.pointerId);
@@ -1248,7 +1329,11 @@ if (typeof module !== "undefined" && module.exports) {
         // ignore
       }
     }
-    extendPath(index);
+    var before = state.path.join(",");
+    applyTapToPath(index);
+    if (state.path.join(",") !== before) {
+      state.gestureChangedPath = true;
+    }
   }
 
   function onPointerMove(e) {
@@ -1259,9 +1344,18 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
     e.preventDefault();
+    var dx = e.clientX - state.dragStartX;
+    var dy = e.clientY - state.dragStartY;
+    if (dx * dx + dy * dy >= DRAG_MOVE_PX * DRAG_MOVE_PX) {
+      state.dragMoved = true;
+    }
     var index = indexFromPoint(e.clientX, e.clientY);
     if (index >= 0) {
+      var before = state.path.join(",");
       extendPath(index);
+      if (state.path.join(",") !== before) {
+        state.gestureChangedPath = true;
+      }
     }
   }
 
@@ -1272,6 +1366,8 @@ if (typeof module !== "undefined" && module.exports) {
     if (state.pointerId != null && e.pointerId !== state.pointerId) {
       return;
     }
+    var index = indexFromPoint(e.clientX, e.clientY);
+    var moved = state.dragMoved || state.gestureChangedPath;
     if (els.grid.releasePointerCapture && state.pointerId != null) {
       try {
         els.grid.releasePointerCapture(state.pointerId);
@@ -1280,6 +1376,7 @@ if (typeof module !== "undefined" && module.exports) {
       }
     }
     endDrag();
+    noteTap(index, moved);
   }
 
   function onWindowPointerUp(e) {

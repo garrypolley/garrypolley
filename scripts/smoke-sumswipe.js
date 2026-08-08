@@ -44,6 +44,14 @@ check("resolvePathWord accepts forward or reverse swipe", function () {
   assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).reversed, true);
 });
 
+check("pathTapAction extends adjacent clicks and restarts otherwise", function () {
+  assert.strictEqual(utils.pathTapAction([], 0, 4), "start");
+  assert.strictEqual(utils.pathTapAction([0], 0, 4), "noop");
+  assert.strictEqual(utils.pathTapAction([0], 1, 4), "extend");
+  assert.strictEqual(utils.pathTapAction([0, 1], 0, 4), "backtrack");
+  assert.strictEqual(utils.pathTapAction([0], 3, 4), "restart");
+});
+
 check("log rating 0–9 and date helpers including history bound", function () {
   assert.strictEqual(utils.RATING_MAX, 9);
   assert.strictEqual(utils.ratingForScore(0, 200), 0);
