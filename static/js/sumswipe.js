@@ -1,6 +1,6 @@
 /**
  * SumSwipe — daily letter-grid word hunt.
- * Swipe paths to find words (A=1…Z=26). Score tiers vs that day's max.
+ * Swipe paths to find words (A=1…Z=26). Progress is a 0–9 log rating vs the day.
  * Pure helpers exported for smoke tests.
  */
 var SumSwipeUtils = (function () {
@@ -13,16 +13,12 @@ var SumSwipeUtils = (function () {
   var MAX_TILE_REUSE = 3;
   /** How far back day navigation may go from today. */
   var MAX_HISTORY_DAYS = 365;
+  /** Display rating ceiling (shown as x/9). */
+  var RATING_MAX = 9;
+  /** Base for log thresholds; 9/9 only at the day’s full 1× point total. */
+  var RATING_BASE = 2;
 
   var puzzleCache = {};
-
-  var TIERS = [
-    { id: "starter", label: "Starter", minRatio: 0 },
-    { id: "bronze", label: "Bronze", minRatio: 0.25 },
-    { id: "silver", label: "Silver", minRatio: 0.5 },
-    { id: "gold", label: "Gold", minRatio: 0.75 },
-    { id: "perfect", label: "Perfect", minRatio: 1 },
-  ];
 
   // English-ish bag for playable daily grids (vowels weighted up).
   var LETTER_BAG =
@@ -497,21 +493,47 @@ var SumSwipeUtils = (function () {
     return total;
   }
 
-  function tierForRatio(ratio) {
-    var current = TIERS[0];
-    for (var i = 0; i < TIERS.length; i++) {
-      if (ratio + 1e-9 >= TIERS[i].minRatio) {
-        current = TIERS[i];
-      }
+  /** Fraction of maxScore required to reach an integer rating 0…RATING_MAX. */
+  function ratingThresholdRatio(level) {
+    var n = parseInt(level, 10);
+    if (!n || n <= 0) {
+      return 0;
     }
-    return current;
+    if (n >= RATING_MAX) {
+      return 1;
+    }
+    return (Math.pow(RATING_BASE, n) - 1) / (Math.pow(RATING_BASE, RATING_MAX) - 1);
   }
 
-  function tierForScore(score, maxScore) {
-    if (!maxScore || maxScore <= 0) {
-      return tierForRatio(0);
+  /**
+   * Log-scaled 0…9 rating from points vs the day’s 1× total.
+   * Early ratings come cheap; 9/9 needs essentially the full target.
+   */
+  function ratingForScore(score, maxScore) {
+    if (!maxScore || maxScore <= 0 || !score || score <= 0) {
+      return 0;
     }
-    return tierForRatio(score / maxScore);
+    var ratio = score / maxScore;
+    if (ratio + 1e-12 >= 1) {
+      return RATING_MAX;
+    }
+    var rating = 0;
+    for (var n = 1; n < RATING_MAX; n++) {
+      if (ratio + 1e-12 >= ratingThresholdRatio(n)) {
+        rating = n;
+      }
+    }
+    return rating;
+  }
+
+  /** Continuous 0…1 fill along the same log curve (for the progress bar). */
+  function ratingFillRatio(score, maxScore) {
+    if (!maxScore || maxScore <= 0 || !score || score <= 0) {
+      return 0;
+    }
+    var ratio = Math.min(1, score / maxScore);
+    var denom = Math.pow(RATING_BASE, RATING_MAX) - 1;
+    return Math.log(1 + ratio * denom) / Math.log(RATING_BASE) / RATING_MAX;
   }
 
   function clampMult(mult) {
@@ -587,7 +609,8 @@ var SumSwipeUtils = (function () {
     GRID_SIZE: GRID_SIZE,
     MAX_TILE_REUSE: MAX_TILE_REUSE,
     MAX_HISTORY_DAYS: MAX_HISTORY_DAYS,
-    TIERS: TIERS,
+    RATING_MAX: RATING_MAX,
+    RATING_BASE: RATING_BASE,
     letterValue: letterValue,
     wordSum: wordSum,
     normalizeWord: normalizeWord,
@@ -615,8 +638,9 @@ var SumSwipeUtils = (function () {
     scoreWords: scoreWords,
     scoreFoundEntries: scoreFoundEntries,
     clampMult: clampMult,
-    tierForRatio: tierForRatio,
-    tierForScore: tierForScore,
+    ratingThresholdRatio: ratingThresholdRatio,
+    ratingForScore: ratingForScore,
+    ratingFillRatio: ratingFillRatio,
     sanitizeFoundWords: sanitizeFoundWords,
     clearPuzzleCache: clearPuzzleCache,
   };
@@ -664,9 +688,7 @@ if (typeof module !== "undefined" && module.exports) {
     liveEq: document.getElementById("ssLiveEq"),
     scoreValue: document.getElementById("ssScoreValue"),
     scoreMax: document.getElementById("ssScoreMax"),
-    tierLabel: document.getElementById("ssTierLabel"),
-    tierFill: document.getElementById("ssTierFill"),
-    tierList: document.getElementById("ssTierList"),
+    ratingFill: document.getElementById("ssRatingFill"),
     foundList: document.getElementById("ssFoundList"),
     foundCount: document.getElementById("ssFoundCount"),
     status: document.getElementById("ssStatus"),
@@ -754,8 +776,8 @@ if (typeof module !== "undefined" && module.exports) {
     return "added";
   }
 
-  function currentTier() {
-    return utils.tierForScore(currentScore(), state.puzzle.maxScore);
+  function currentRating() {
+    return utils.ratingForScore(currentScore(), state.puzzle.maxScore);
   }
 
   function formatDisplayDate(dateKey) {
@@ -774,66 +796,33 @@ if (typeof module !== "undefined" && module.exports) {
   function renderChrome() {
     var today = utils.todayKey();
     var score = currentScore();
-    var tier = currentTier();
-    var ratio = state.puzzle.maxScore ? score / state.puzzle.maxScore : 0;
+    var rating = currentRating();
+    var fill = utils.ratingFillRatio(score, state.puzzle.maxScore);
 
     els.title.textContent = "SumSwipe";
     els.blurb.textContent =
       "Daily puzzle for " +
       formatDisplayDate(state.dateKey) +
-      ". Find words (A=1…Z=26). Reuse one tile for 2×/3× bonus. Target is all words at 1×.";
+      ". Find words (A=1…Z=26). Reuse one tile for 2×/3×. Rating is 0–9 on a log scale.";
     els.progress.textContent =
       foundWordCount() +
       " word" +
       (foundWordCount() === 1 ? "" : "s") +
       " · " +
-      score +
-      " / " +
-      state.puzzle.maxScore +
-      " pts";
+      rating +
+      "/" +
+      utils.RATING_MAX;
 
-    els.scoreValue.textContent = String(score);
-    els.scoreMax.textContent = String(state.puzzle.maxScore);
-    els.tierLabel.textContent = tier.label;
-    els.tierLabel.dataset.tier = tier.id;
-    // Fill caps at 100%; score may exceed target via reuse bonuses.
-    els.tierFill.style.width = Math.min(100, Math.round(ratio * 1000) / 10) + "%";
-    els.tierFill.dataset.tier = tier.id;
+    els.scoreValue.textContent = String(rating);
+    els.scoreMax.textContent = String(utils.RATING_MAX);
+    els.ratingFill.style.width = Math.round(fill * 1000) / 10 + "%";
+    els.ratingFill.dataset.rating = String(rating);
     els.foundCount.textContent = String(foundWordCount());
 
     var earliest = utils.earliestDateKey();
     els.prev.disabled = state.dateKey <= earliest;
     els.next.disabled = state.dateKey >= today;
     els.today.disabled = state.dateKey === today;
-
-    renderTiers(ratio);
-  }
-
-  function renderTiers(ratio) {
-    els.tierList.innerHTML = "";
-    for (var i = 0; i < utils.TIERS.length; i++) {
-      var t = utils.TIERS[i];
-      var li = document.createElement("li");
-      li.className = "ss-tier-item";
-      if (ratio + 1e-9 >= t.minRatio) {
-        li.classList.add("is-reached");
-      }
-      if (currentTier().id === t.id) {
-        li.classList.add("is-current");
-      }
-      var name = document.createElement("span");
-      name.className = "ss-tier-name";
-      name.textContent = t.label;
-      var need = document.createElement("span");
-      need.className = "ss-tier-need";
-      need.textContent =
-        t.minRatio >= 1
-          ? "100%"
-          : Math.round(t.minRatio * 100) + "%";
-      li.appendChild(name);
-      li.appendChild(need);
-      els.tierList.appendChild(li);
-    }
   }
 
   function renderFound() {
@@ -1066,16 +1055,13 @@ if (typeof module !== "undefined" && module.exports) {
     renderGrid();
     renderFound();
     updateLive();
-    var tier = currentTier();
     var isToday = state.dateKey === utils.todayKey();
     setStatus(
       (isToday ? "Today’s grid" : "This day’s grid") +
-        ": " +
-        state.puzzle.wordCount +
-        " possible words · target " +
-        state.puzzle.maxScore +
-        " pts (1×) · " +
-        tier.label +
+        " · " +
+        currentRating() +
+        "/" +
+        utils.RATING_MAX +
         "."
     );
   }
@@ -1126,20 +1112,19 @@ if (typeof module !== "undefined" && module.exports) {
     clearPath();
 
     var pts = utils.wordSum(resolved.word) * mult;
-    var tier = currentTier();
+    var rating = currentRating();
     var note = resolved.reversed ? " (reverse)" : "";
     var multNote = mult > 1 ? " ×" + mult : "";
     var upgradeNote = result === "upgraded" ? " (upgraded)" : "";
-    if (currentScore() >= state.puzzle.maxScore) {
+    if (rating >= utils.RATING_MAX) {
       setStatus(
-        "Perfect! " +
+        "9/9! " +
           resolved.word +
           multNote +
           " +" +
           pts +
           note +
-          upgradeNote +
-          " — max reached.",
+          upgradeNote,
         "success"
       );
       root.classList.add("ss-celebrate");
@@ -1155,8 +1140,9 @@ if (typeof module !== "undefined" && module.exports) {
           note +
           upgradeNote +
           " · " +
-          tier.label +
-          " tier",
+          rating +
+          "/" +
+          utils.RATING_MAX,
         "success"
       );
     }

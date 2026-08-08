@@ -44,8 +44,19 @@ check("resolvePathWord accepts forward or reverse swipe", function () {
   assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).reversed, true);
 });
 
-check("tiers and date helpers including history bound", function () {
-  assert.strictEqual(utils.tierForScore(50, 200).id, "bronze");
+check("log rating 0–9 and date helpers including history bound", function () {
+  assert.strictEqual(utils.RATING_MAX, 9);
+  assert.strictEqual(utils.ratingForScore(0, 200), 0);
+  assert.strictEqual(utils.ratingForScore(200, 200), 9);
+  assert.strictEqual(utils.ratingForScore(400, 200), 9);
+  // ~50% of max → 8 on base-2 thresholds
+  assert.strictEqual(utils.ratingForScore(100, 200), 8);
+  // small fraction still unlocks early ratings
+  assert.ok(utils.ratingForScore(2, 200) >= 1);
+  assert.ok(utils.ratingForScore(2, 200) < 8);
+  assert.ok(utils.ratingFillRatio(100, 200) > 0.8);
+  assert.ok(utils.ratingFillRatio(100, 200) < 1);
+  assert.strictEqual(utils.ratingFillRatio(200, 200), 1);
   assert.strictEqual(utils.shiftDateKey("2026-08-08", -1), "2026-08-07");
   var today = utils.todayKey(new Date(2026, 7, 8));
   assert.strictEqual(today, "2026-08-08");

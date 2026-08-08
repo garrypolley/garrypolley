@@ -15,15 +15,11 @@
             <span class="ss-live-label">Score</span>
             <strong id="ssScoreValue" class="ss-score-value">0</strong>
             <span class="ss-score-divider">/</span>
-            <span id="ssScoreMax" class="ss-score-max">0</span>
-          </div>
-          <div class="ss-tier-now">
-            <span class="ss-live-label">Tier</span>
-            <strong id="ssTierLabel" class="ss-tier-label" data-tier="starter">Starter</strong>
+            <span id="ssScoreMax" class="ss-score-max">9</span>
           </div>
         </div>
-        <div class="ss-tier-bar" aria-hidden="true">
-          <div id="ssTierFill" class="ss-tier-fill" data-tier="starter"></div>
+        <div class="ss-rating-bar" aria-hidden="true">
+          <div id="ssRatingFill" class="ss-rating-fill" data-rating="0"></div>
         </div>
       </div>
 
@@ -61,9 +57,11 @@
     </div>
 
     <aside class="ss-sidebar">
-      <h4 class="ss-sidebar-title">Tiers</h4>
-      <p class="tool-hint">Percent of that day’s target (all words at 1×). Tile-reuse multipliers are bonus and can push you over 100%.</p>
-      <ul id="ssTierList" class="ss-tier-list"></ul>
+      <h4 class="ss-sidebar-title">Rating</h4>
+      <p class="tool-hint">
+        Score is 0–9 on a log scale from the day’s word values. Early steps come
+        quickly; 9/9 is rare.
+      </p>
 
       <h4 class="ss-sidebar-title">
         Found
