@@ -469,9 +469,14 @@
   transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
 }
 
+.ss-cell.is-focused,
 .ss-cell:focus-visible {
   outline: 2px solid var(--ss-accent);
   outline-offset: 2px;
+}
+
+.ss-cell.is-path-head .ss-cell-value {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .ss-cell.is-path {

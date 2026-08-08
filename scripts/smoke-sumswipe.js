@@ -25,8 +25,6 @@ check("pathMultiplier uses max single-tile visits, capped at 3, no stacking", fu
   assert.strictEqual(utils.pathMultiplier([0, 1, 2]), 1);
   assert.strictEqual(utils.pathMultiplier([0, 1, 0]), 2);
   assert.strictEqual(utils.pathMultiplier([0, 1, 0, 1, 0]), 3);
-  // Tile 0 thrice and tile 1 twice → still 3×, not 6×
-  assert.strictEqual(utils.pathMultiplier([0, 1, 0, 1, 0]), 3);
   assert.strictEqual(utils.wordPathScore("CAT", [0, 1, 0]), utils.wordSum("CAT") * 2);
 });
 
@@ -35,9 +33,7 @@ check("isValidPath allows reuse up to 3, rejects consecutive same cell", functio
   assert.strictEqual(utils.isValidPath([0, 1, 0], 4), true);
   assert.strictEqual(utils.isValidPath([0, 0], 4), false);
   assert.strictEqual(utils.isValidPath([0, 2], 4), false);
-  // 0 and 1 each used three times — ok
   assert.strictEqual(utils.isValidPath([0, 1, 0, 1, 0, 1], 4), true);
-  // 0 used four times — over cap
   assert.strictEqual(utils.isValidPath([0, 1, 0, 1, 0, 1, 0], 4), false);
 });
 
@@ -48,19 +44,30 @@ check("resolvePathWord accepts forward or reverse swipe", function () {
   assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).reversed, true);
 });
 
-check("tiers and date helpers", function () {
+check("tiers and date helpers including history bound", function () {
   assert.strictEqual(utils.tierForScore(50, 200).id, "bronze");
   assert.strictEqual(utils.shiftDateKey("2026-08-08", -1), "2026-08-07");
+  var today = utils.todayKey(new Date(2026, 7, 8));
+  assert.strictEqual(today, "2026-08-08");
+  assert.strictEqual(utils.earliestDateKey(new Date(2026, 7, 8)), "2025-08-08");
+  assert.strictEqual(utils.MAX_HISTORY_DAYS, 365);
 });
 
-check("sanitizeFoundWords keeps best multiplier and accepts legacy strings", function () {
+check("sanitizeFoundWords clamps to bestMult and drops unknown words", function () {
   var valid = { CAT: true, DOG: true };
+  var best = { CAT: 1, DOG: 2 };
   var cleaned = utils.sanitizeFoundWords(
-    ["cat", { word: "DOG", mult: 2 }, { word: "CAT", mult: 3 }, { word: "NOPE", mult: 2 }],
-    valid
+    [
+      "cat",
+      { word: "DOG", mult: 3 },
+      { word: "CAT", mult: 3 },
+      { word: "NOPE", mult: 2 },
+    ],
+    valid,
+    best
   );
   assert.deepStrictEqual(cleaned, [
-    { word: "CAT", mult: 3 },
+    { word: "CAT", mult: 1 },
     { word: "DOG", mult: 2 },
   ]);
 });
@@ -75,25 +82,50 @@ check("scoreFoundEntries applies multipliers", function () {
   );
 });
 
-check("daily grid deterministic; maxScore includes best multipliers", function () {
+check("daily grid deterministic; maxScore is base 1× total", function () {
+  utils.clearPuzzleCache();
   var a = utils.generateGrid("2026-08-08", 4);
   var b = utils.generateGrid("2026-08-08", 4);
-  assert.deepStrictEqual(a.grid, b.grid);
-  assert.strictEqual(a.maxScore, b.maxScore);
+  assert.strictEqual(a, b, "cached puzzle object reused");
   assert.ok(a.wordCount >= 5, "wordCount " + a.wordCount);
-  var expected = 0;
+  var base = 0;
+  var boosted = 0;
   a.words.forEach(function (w) {
-    expected += utils.wordSum(w) * (a.bestMult[w] || 1);
+    base += utils.wordSum(w);
+    boosted += utils.wordSum(w) * (a.bestMult[w] || 1);
   });
-  assert.strictEqual(a.maxScore, expected);
+  assert.strictEqual(a.maxScore, base);
+  assert.strictEqual(a.boostedScore, boosted);
+  assert.ok(a.boostedScore >= a.maxScore);
 });
 
-check("findAllWords tracks reuse multipliers", function () {
+check("unique-letter length-3 words stay at bestMult 1", function () {
   var grid = utils.flattenGrid(["CATS", "DOGX", "XXXX", "XXXX"]);
   var sol = utils.findAllWords(grid, 4);
   assert.ok(sol.words.indexOf("CAT") !== -1);
-  assert.ok(sol.bestMult.CAT >= 1);
-  assert.ok(sol.maxScore >= utils.wordSum("CAT") + utils.wordSum("DOG"));
+  assert.strictEqual(sol.bestMult.CAT, 1);
+  assert.ok(sol.words.indexOf("DOG") !== -1);
+  assert.strictEqual(sol.bestMult.DOG, 1);
+});
+
+check("findAllWords tracks reuse multipliers for repeat-letter words", function () {
+  // M O M .
+  // . . . .
+  var grid = utils.flattenGrid(["MOMX", "XXXX", "XXXX", "XXXX"]);
+  var sol = utils.findAllWords(grid, 4);
+  assert.ok(sol.words.indexOf("MOM") !== -1);
+  assert.ok(sol.bestMult.MOM >= 2, "MOM should allow tile reuse on M");
+});
+
+check("puzzle cache speeds repeat generateGrid", function () {
+  utils.clearPuzzleCache();
+  var t0 = Date.now();
+  utils.generateGrid("2026-08-01", 4);
+  var first = Date.now() - t0;
+  var t1 = Date.now();
+  utils.generateGrid("2026-08-01", 4);
+  var second = Date.now() - t1;
+  assert.ok(second < 20, "cached generate should be near-instant, got " + second + "ms (first " + first + "ms)");
 });
 
 if (!process.exitCode) {

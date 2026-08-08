@@ -11,6 +11,10 @@ var SumSwipeUtils = (function () {
   var GRID_SIZE = 4;
   /** Max times one tile may appear on a path; also caps the word multiplier. */
   var MAX_TILE_REUSE = 3;
+  /** How far back day navigation may go from today. */
+  var MAX_HISTORY_DAYS = 365;
+
+  var puzzleCache = {};
 
   var TIERS = [
     { id: "starter", label: "Starter", minRatio: 0 },
@@ -327,6 +331,11 @@ var SumSwipeUtils = (function () {
 
   function generateGrid(dateKey, size) {
     size = size || GRID_SIZE;
+    var cacheKey = dateKey + ":" + size;
+    if (puzzleCache[cacheKey]) {
+      return puzzleCache[cacheKey];
+    }
+
     var rand = mulberry32(hashDateKey(dateKey + ":grid"));
     var cells = size * size;
     var best = null;
@@ -361,16 +370,19 @@ var SumSwipeUtils = (function () {
       rows.push(best.grid.slice(r * size, r * size + size).join(""));
     }
 
-    return {
+    var puzzle = {
       dateKey: dateKey,
       size: size,
       grid: best.grid.slice(),
       rows: rows,
       words: best.solution.words.slice(),
       maxScore: best.solution.maxScore,
+      boostedScore: best.solution.boostedScore,
       wordCount: best.solution.words.length,
       bestMult: best.solution.bestMult || {},
     };
+    puzzleCache[cacheKey] = puzzle;
+    return puzzle;
   }
 
   function findAllWords(grid, size) {
@@ -432,11 +444,20 @@ var SumSwipeUtils = (function () {
     }
 
     var words = Object.keys(bestMult).sort();
+    // Tier target is base (1×) sums. Tile-reuse multipliers are bonus on top.
     var maxScore = 0;
+    var boostedScore = 0;
     for (i = 0; i < words.length; i++) {
-      maxScore += wordSum(words[i]) * bestMult[words[i]];
+      var base = wordSum(words[i]);
+      maxScore += base;
+      boostedScore += base * bestMult[words[i]];
     }
-    return { words: words, maxScore: maxScore, bestMult: bestMult };
+    return {
+      words: words,
+      maxScore: maxScore,
+      boostedScore: boostedScore,
+      bestMult: bestMult,
+    };
   }
 
   function scoreFoundEntries(entries) {
@@ -506,9 +527,9 @@ var SumSwipeUtils = (function () {
 
   /**
    * Normalize saved finds to [{ word, mult }, ...].
-   * Accepts legacy string arrays.
+   * Accepts legacy string arrays. Clamps multipliers to bestMult when provided.
    */
-  function sanitizeFoundWords(raw, validSet) {
+  function sanitizeFoundWords(raw, validSet, bestMult) {
     var byWord = {};
     if (!Array.isArray(raw)) {
       return [];
@@ -534,6 +555,12 @@ var SumSwipeUtils = (function () {
       if (!isDictionaryWord(w)) {
         continue;
       }
+      if (bestMult && Object.prototype.hasOwnProperty.call(bestMult, w)) {
+        mult = Math.min(mult, clampMult(bestMult[w]));
+      } else if (bestMult) {
+        // Word not in today's solution map — drop.
+        continue;
+      }
       if (!byWord[w] || mult > byWord[w]) {
         byWord[w] = mult;
       }
@@ -546,11 +573,20 @@ var SumSwipeUtils = (function () {
     return out;
   }
 
+  function earliestDateKey(now) {
+    return shiftDateKey(todayKey(now), -MAX_HISTORY_DAYS);
+  }
+
+  function clearPuzzleCache() {
+    puzzleCache = {};
+  }
+
   return {
     MIN_WORD_LEN: MIN_WORD_LEN,
     MAX_WORD_LEN: MAX_WORD_LEN,
     GRID_SIZE: GRID_SIZE,
     MAX_TILE_REUSE: MAX_TILE_REUSE,
+    MAX_HISTORY_DAYS: MAX_HISTORY_DAYS,
     TIERS: TIERS,
     letterValue: letterValue,
     wordSum: wordSum,
@@ -573,6 +609,7 @@ var SumSwipeUtils = (function () {
     parseDateKey: parseDateKey,
     shiftDateKey: shiftDateKey,
     todayKey: todayKey,
+    earliestDateKey: earliestDateKey,
     generateGrid: generateGrid,
     findAllWords: findAllWords,
     scoreWords: scoreWords,
@@ -581,6 +618,7 @@ var SumSwipeUtils = (function () {
     tierForRatio: tierForRatio,
     tierForScore: tierForScore,
     sanitizeFoundWords: sanitizeFoundWords,
+    clearPuzzleCache: clearPuzzleCache,
   };
 })();
 
@@ -601,7 +639,7 @@ if (typeof module !== "undefined" && module.exports) {
   }
 
   var utils = SumSwipeUtils;
-  var storageKey = "sumswipe-daily-v3";
+  var storageKey = "sumswipe-daily-v4";
 
   var state = {
     dateKey: utils.todayKey(),
@@ -612,6 +650,7 @@ if (typeof module !== "undefined" && module.exports) {
     path: [],
     dragging: false,
     pointerId: null,
+    focusIndex: 0,
   };
 
   var els = {
@@ -665,7 +704,7 @@ if (typeof module !== "undefined" && module.exports) {
     var all = loadAllProgress();
     var saved = all[state.dateKey];
     var raw = saved && Array.isArray(saved.found) ? saved.found : [];
-    state.found = utils.sanitizeFoundWords(raw, state.validSet);
+    state.found = utils.sanitizeFoundWords(raw, state.validSet, state.bestMult);
   }
 
   function setStatus(msg, kind) {
@@ -697,6 +736,8 @@ if (typeof module !== "undefined" && module.exports) {
 
   function upsertFound(word, mult) {
     mult = utils.clampMult(mult);
+    var allowed = state.bestMult[word] || 1;
+    mult = Math.min(mult, utils.clampMult(allowed));
     for (var i = 0; i < state.found.length; i++) {
       if (state.found[i].word === word) {
         if (mult > state.found[i].mult) {
@@ -740,7 +781,7 @@ if (typeof module !== "undefined" && module.exports) {
     els.blurb.textContent =
       "Daily puzzle for " +
       formatDisplayDate(state.dateKey) +
-      ". Swipe any word (either direction). Reuse one tile for 2×/3×. A=1…Z=26.";
+      ". Find words (A=1…Z=26). Reuse one tile for 2×/3× bonus. Target is all words at 1×.";
     els.progress.textContent =
       foundWordCount() +
       " word" +
@@ -755,11 +796,13 @@ if (typeof module !== "undefined" && module.exports) {
     els.scoreMax.textContent = String(state.puzzle.maxScore);
     els.tierLabel.textContent = tier.label;
     els.tierLabel.dataset.tier = tier.id;
+    // Fill caps at 100%; score may exceed target via reuse bonuses.
     els.tierFill.style.width = Math.min(100, Math.round(ratio * 1000) / 10) + "%";
     els.tierFill.dataset.tier = tier.id;
     els.foundCount.textContent = String(foundWordCount());
 
-    els.prev.disabled = false;
+    var earliest = utils.earliestDateKey();
+    els.prev.disabled = state.dateKey <= earliest;
     els.next.disabled = state.dateKey >= today;
     els.today.disabled = state.dateKey === today;
 
@@ -866,18 +909,22 @@ if (typeof module !== "undefined" && module.exports) {
   function updateLive() {
     var forward = utils.pathToWord(state.puzzle.grid, state.path);
     var resolved = utils.resolvePathWord(state.puzzle.grid, state.path);
-    var displayWord = forward || "—";
-    var base = forward ? utils.wordSum(forward) : null;
+    var scoredWord = resolved.word || forward;
+    var displayWord = scoredWord || "—";
+    var base = scoredWord ? utils.wordSum(scoredWord) : null;
     var mult = utils.pathMultiplier(state.path);
     var total = base == null ? null : base * mult;
 
     els.liveWord.textContent = displayWord;
+    if (resolved.word && resolved.reversed && forward) {
+      els.liveWord.textContent = resolved.word + " ← " + forward;
+    }
     els.liveSum.textContent =
       total == null ? "—" : mult > 1 ? total + " (" + mult + "×)" : String(total);
 
     if (!forward) {
       els.liveEq.textContent =
-        "Drag through letters. Slide back to the previous tile to undo. Reuse a tile for 2×/3×.";
+        "Drag or use arrows + Space. Enter submits. Esc clears. Reuse a tile for 2×/3×.";
       return;
     }
 
@@ -886,12 +933,12 @@ if (typeof module !== "undefined" && module.exports) {
       var ch = forward.charAt(i);
       parts.push(ch + "(" + utils.letterValue(ch) + ")");
     }
-    var msg = parts.join(" + ") + " = " + base;
+    var msg = parts.join(" + ") + " = " + utils.wordSum(forward);
+    if (resolved.word && resolved.reversed) {
+      msg += " → " + resolved.word + " (" + base + ")";
+    }
     if (mult > 1) {
       msg += " × " + mult + " = " + total;
-    }
-    if (resolved.word && resolved.reversed) {
-      msg += " → " + resolved.word;
     }
     els.liveEq.textContent = msg;
   }
@@ -900,7 +947,7 @@ if (typeof module !== "undefined" && module.exports) {
     var cells = els.grid.querySelectorAll(".ss-cell");
     var visits = utils.countTileVisits(state.path);
     for (var i = 0; i < cells.length; i++) {
-      cells[i].classList.remove("is-path", "is-path-head", "is-reused");
+      cells[i].classList.remove("is-path", "is-path-head", "is-reused", "is-focused");
       cells[i].removeAttribute("data-visits");
     }
     for (var j = 0; j < state.path.length; j++) {
@@ -918,8 +965,27 @@ if (typeof module !== "undefined" && module.exports) {
         cell.classList.add("is-path-head");
       }
     }
+    var focusCell = els.grid.querySelector('[data-index="' + state.focusIndex + '"]');
+    if (focusCell) {
+      focusCell.classList.add("is-focused");
+    }
     drawPath();
     updateLive();
+  }
+
+  function setFocusIndex(index) {
+    if (!state.puzzle) {
+      return;
+    }
+    if (index < 0 || index >= state.puzzle.grid.length) {
+      return;
+    }
+    state.focusIndex = index;
+    var cell = els.grid.querySelector('[data-index="' + index + '"]');
+    if (cell && typeof cell.focus === "function") {
+      cell.focus();
+    }
+    highlightPath();
   }
 
   function clearPath() {
@@ -941,7 +1007,7 @@ if (typeof module !== "undefined" && module.exports) {
     els.grid.innerHTML = "";
     els.grid.setAttribute(
       "aria-label",
-      "SumSwipe daily grid for " + state.dateKey
+      "SumSwipe daily grid for " + state.dateKey + ". Arrow keys move, Space adds, Enter submits."
     );
 
     for (var i = 0; i < p.grid.length; i++) {
@@ -953,7 +1019,7 @@ if (typeof module !== "undefined" && module.exports) {
         "aria-label",
         "Letter " + p.grid[i] + ", value " + utils.letterValue(p.grid[i])
       );
-      btn.tabIndex = -1;
+      btn.tabIndex = i === state.focusIndex ? 0 : -1;
       var letter = document.createElement("span");
       letter.className = "ss-cell-letter";
       letter.textContent = p.grid[i];
@@ -962,16 +1028,28 @@ if (typeof module !== "undefined" && module.exports) {
       val.textContent = String(utils.letterValue(p.grid[i]));
       btn.appendChild(letter);
       btn.appendChild(val);
+      btn.addEventListener("focus", function (ev) {
+        var idx = parseInt(ev.currentTarget.dataset.index, 10);
+        if (!isNaN(idx)) {
+          state.focusIndex = idx;
+          highlightPath();
+        }
+      });
       els.grid.appendChild(btn);
     }
 
     requestAnimationFrame(syncSvgSize);
+    highlightPath();
   }
 
   function loadDay(dateKey) {
     var today = utils.todayKey();
+    var earliest = utils.earliestDateKey();
     if (dateKey > today) {
       dateKey = today;
+    }
+    if (dateKey < earliest) {
+      dateKey = earliest;
     }
     state.dateKey = dateKey;
     state.puzzle = utils.generateGrid(dateKey, utils.GRID_SIZE);
@@ -983,6 +1061,7 @@ if (typeof module !== "undefined" && module.exports) {
     state.path = [];
     state.dragging = false;
     state.pointerId = null;
+    state.focusIndex = 0;
     restoreProgress();
     renderChrome();
     renderGrid();
@@ -994,9 +1073,9 @@ if (typeof module !== "undefined" && module.exports) {
       (isToday ? "Today’s grid" : "This day’s grid") +
         ": " +
         state.puzzle.wordCount +
-        " possible words · max " +
+        " possible words · target " +
         state.puzzle.maxScore +
-        " pts · " +
+        " pts (1×) · " +
         tier.label +
         "."
     );
@@ -1251,7 +1330,12 @@ if (typeof module !== "undefined" && module.exports) {
   );
 
   els.prev.addEventListener("click", function () {
-    loadDay(utils.shiftDateKey(state.dateKey, -1));
+    var prev = utils.shiftDateKey(state.dateKey, -1);
+    var earliest = utils.earliestDateKey();
+    if (prev < earliest) {
+      prev = earliest;
+    }
+    loadDay(prev);
   });
   els.next.addEventListener("click", function () {
     var today = utils.todayKey();
@@ -1275,6 +1359,64 @@ if (typeof module !== "undefined" && module.exports) {
     renderChrome();
     renderFound();
     setStatus("Day’s finds cleared.");
+  });
+
+  function moveFocus(dr, dc) {
+    var size = state.puzzle.size;
+    var pos = utils.indexToRowCol(state.focusIndex, size);
+    var row = Math.max(0, Math.min(size - 1, pos.row + dr));
+    var col = Math.max(0, Math.min(size - 1, pos.col + dc));
+    setFocusIndex(utils.rowColToIndex(row, col, size));
+    // Keep roving tabindex on the focused cell.
+    var cells = els.grid.querySelectorAll(".ss-cell");
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].tabIndex = -1;
+    }
+    var focusCell = els.grid.querySelector('[data-index="' + state.focusIndex + '"]');
+    if (focusCell) {
+      focusCell.tabIndex = 0;
+      focusCell.focus();
+    }
+  }
+
+  els.grid.addEventListener("keydown", function (e) {
+    if (state.dragging) {
+      return;
+    }
+    var key = e.key;
+    if (key === "ArrowUp") {
+      e.preventDefault();
+      moveFocus(-1, 0);
+    } else if (key === "ArrowDown") {
+      e.preventDefault();
+      moveFocus(1, 0);
+    } else if (key === "ArrowLeft") {
+      e.preventDefault();
+      moveFocus(0, -1);
+    } else if (key === "ArrowRight") {
+      e.preventDefault();
+      moveFocus(0, 1);
+    } else if (key === " " || key === "Spacebar") {
+      e.preventDefault();
+      extendPath(state.focusIndex);
+    } else if (key === "Enter") {
+      e.preventDefault();
+      if (state.path.length >= utils.MIN_WORD_LEN) {
+        tryCommitPath();
+      } else {
+        extendPath(state.focusIndex);
+      }
+    } else if (key === "Backspace") {
+      e.preventDefault();
+      if (state.path.length) {
+        state.path.pop();
+        highlightPath();
+      }
+    } else if (key === "Escape") {
+      e.preventDefault();
+      clearPath();
+      setStatus("Path cleared.");
+    }
   });
 
   var resizeTimer = null;
