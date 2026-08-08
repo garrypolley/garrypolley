@@ -44,11 +44,14 @@ check("resolvePathWord accepts forward or reverse swipe", function () {
   assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).reversed, true);
 });
 
-check("pathTapAction extends adjacent clicks and ignores non-adjacent", function () {
+check("pathTapAction extends adjacent clicks and reuses previous tile under cap", function () {
   assert.strictEqual(utils.pathTapAction([], 0, 4), "start");
   assert.strictEqual(utils.pathTapAction([0], 0, 4), "noop");
   assert.strictEqual(utils.pathTapAction([0], 1, 4), "extend");
-  assert.strictEqual(utils.pathTapAction([0, 1], 0, 4), "backtrack");
+  // A→Z→A style: return to previous tile while under visit cap = extend (reuse)
+  assert.strictEqual(utils.pathTapAction([0, 1], 0, 4), "extend");
+  // At visit cap on previous tile (0 used 3×), returning undoes instead
+  assert.strictEqual(utils.pathTapAction([0, 1, 0, 1, 0, 1], 0, 4), "backtrack");
   assert.strictEqual(utils.pathTapAction([0], 3, 4), "ignore");
 });
 

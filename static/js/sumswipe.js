@@ -80,7 +80,9 @@ var SumSwipeUtils = (function () {
   /**
    * How a tap/click on `index` should affect an existing path.
    * start | extend | backtrack | noop | ignore
-   * Non-adjacent taps are ignored so a miss doesn’t wipe the path.
+   * Returning to the immediate previous tile prefers reuse (extend) when
+   * under the visit cap — needed for words like GAZA (A→Z→A). At the cap,
+   * that gesture undoes instead.
    */
   function pathTapAction(path, index, size) {
     if (!Array.isArray(path) || path.length === 0) {
@@ -91,6 +93,10 @@ var SumSwipeUtils = (function () {
       return "noop";
     }
     if (path.length >= 2 && index === path[path.length - 2]) {
+      var visits = countTileVisits(path);
+      if ((visits[index] || 0) < MAX_TILE_REUSE) {
+        return "extend";
+      }
       return "backtrack";
     }
     if (areAdjacent(last, index, size)) {
@@ -1279,8 +1285,19 @@ if (typeof module !== "undefined" && module.exports) {
     if (index === last) {
       return;
     }
-    // Backtrack only by returning to the immediate previous tile.
+    // Returning to the previous tile: reuse when under the visit cap (A→Z→A),
+    // otherwise undo that step.
     if (state.path.length >= 2 && index === state.path[state.path.length - 2]) {
+      var prevVisits = utils.countTileVisits(state.path);
+      if (
+        (prevVisits[index] || 0) < utils.MAX_TILE_REUSE &&
+        state.path.length < utils.MAX_WORD_LEN
+      ) {
+        state.path.push(index);
+        state.focusIndex = index;
+        highlightPath();
+        return;
+      }
       state.path.pop();
       state.focusIndex = state.path[state.path.length - 1];
       highlightPath();
