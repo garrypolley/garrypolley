@@ -32,7 +32,7 @@
           <span class="ss-live-label">Sum</span>
           <strong id="ssLiveSum" class="ss-live-sum">—</strong>
         </div>
-        <p id="ssLiveEq" class="ss-live-eq">Click or drag · tap next letter to extend · double-tap end to submit</p>
+        <p id="ssLiveEq" class="ss-live-eq">Drag to swipe · click to extend · release/Submit/double-tap end</p>
       </div>
 
       <div class="ss-board-wrap">
@@ -48,10 +48,11 @@
       <p id="ssStatus" class="tool-status" role="status" aria-live="polite"></p>
 
       <div class="tool-actions ss-actions">
+        <button type="button" id="ssSubmit">Submit word</button>
+        <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
         <button type="button" id="ssPrev" class="tool-button--secondary">Previous day</button>
         <button type="button" id="ssToday" class="tool-button--secondary">Today</button>
         <button type="button" id="ssNext">Next day</button>
-        <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
         <button type="button" id="ssResetPuzzle" class="tool-button--secondary">Reset day</button>
       </div>
     </div>
@@ -74,7 +75,8 @@
         <p class="tool-hint">
           A=1…Z=26. Adjacent includes diagonals. Tiles may be reused (max 3 visits each).
           Reusing the same tile twice/thrice multiplies that word by 2×/3× — multipliers do not stack across tiles.
-          Click or drag through letters; click an adjacent tile to extend; double-tap the last letter to submit.
+          Click or drag through letters; click an adjacent tile to extend.
+          Release after a swipe to submit, double-tap the last letter, or press Submit word.
           Slide or tap back to the previous tile to undo. Non-adjacent taps leave the path alone (use Clear to restart).
           Keyboard: arrows move, Space adds, Enter submits, Backspace undoes, Esc clears.
         </p>

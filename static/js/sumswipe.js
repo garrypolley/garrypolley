@@ -742,6 +742,7 @@ if (typeof module !== "undefined" && module.exports) {
     dragStartX: 0,
     dragStartY: 0,
     gestureChangedPath: false,
+    gestureStartLen: 0,
     lastTapTime: 0,
     lastTapIndex: -1,
     focusIndex: 0,
@@ -766,6 +767,7 @@ if (typeof module !== "undefined" && module.exports) {
     next: document.getElementById("ssNext"),
     today: document.getElementById("ssToday"),
     clear: document.getElementById("ssClear"),
+    submit: document.getElementById("ssSubmit"),
     reset: document.getElementById("ssResetPuzzle"),
   };
 
@@ -873,7 +875,7 @@ if (typeof module !== "undefined" && module.exports) {
     els.blurb.textContent =
       "Daily puzzle for " +
       formatDisplayDate(state.dateKey) +
-      ". Find words (A=1…Z=26). Click or drag to build a path; double-tap the last letter to submit.";
+      ". Find words (A=1…Z=26). Drag to swipe, or click letters and submit.";
     els.progress.textContent =
       foundWordCount() +
       " word" +
@@ -905,7 +907,7 @@ if (typeof module !== "undefined" && module.exports) {
     if (!entries.length) {
       var empty = document.createElement("li");
       empty.className = "ss-found-empty";
-      empty.textContent = "No words yet — click or drag a path, then double-tap the end.";
+      empty.textContent = "No words yet — swipe a path, or click letters and hit Submit.";
       els.foundList.appendChild(empty);
       return;
     }
@@ -983,7 +985,7 @@ if (typeof module !== "undefined" && module.exports) {
 
     if (!forward) {
       els.liveEq.textContent =
-        "Click or drag · tap next letter to extend · double-tap end to submit";
+        "Drag to swipe · click to extend · release/Submit/double-tap end";
       return;
     }
 
@@ -1049,8 +1051,7 @@ if (typeof module !== "undefined" && module.exports) {
 
   function clearPath() {
     state.path = [];
-    state.lastTapTime = 0;
-    state.lastTapIndex = -1;
+    clearTapMemory();
     highlightPath();
   }
 
@@ -1261,8 +1262,8 @@ if (typeof module !== "undefined" && module.exports) {
     return best;
   }
 
-  var DOUBLE_TAP_MS = 550;
-  var DRAG_MOVE_PX = 22;
+  var DOUBLE_TAP_MS = 600;
+  var DRAG_MOVE_PX = 18;
 
   function extendPath(index) {
     if (index < 0 || index >= state.puzzle.grid.length) {
@@ -1322,47 +1323,39 @@ if (typeof module !== "undefined" && module.exports) {
     state.pointerId = null;
   }
 
-  function noteTap(index, gestureChangedPath, dragMoved) {
-    if (index < 0) {
-      state.lastTapTime = 0;
-      state.lastTapIndex = -1;
+  function pathEndIndex() {
+    if (!state.path.length) {
+      return -1;
+    }
+    return state.path[state.path.length - 1];
+  }
+
+  function canSubmitPath() {
+    return state.path.length >= utils.MIN_WORD_LEN;
+  }
+
+  function recordEndTap(index) {
+    state.lastTapTime = Date.now();
+    state.lastTapIndex = index;
+  }
+
+  function clearTapMemory() {
+    state.lastTapTime = 0;
+    state.lastTapIndex = -1;
+  }
+
+  /** True when this pointer-down should submit via double-tap on the path end. */
+  function shouldDoubleTapSubmit(index) {
+    if (!canSubmitPath() || index !== pathEndIndex()) {
       return false;
     }
-    var onPathEnd =
-      state.path.length >= utils.MIN_WORD_LEN &&
-      index === state.path[state.path.length - 1];
-    var now = Date.now();
-    var isDouble = utils.isDoubleTap(
-      now,
+    return utils.isDoubleTap(
+      Date.now(),
       state.lastTapTime,
       state.lastTapIndex,
       index,
       DOUBLE_TAP_MS
     );
-    var counts = utils.countsTowardDoubleTap({
-      gestureChangedPath: gestureChangedPath,
-      dragMoved: dragMoved,
-      onPathEnd: onPathEnd,
-    });
-
-    // Path-changing / off-end drag: clear, unless this finishes a double on the end
-    // (allow a slightly jittery second tap to still submit).
-    if (!counts && !(isDouble && onPathEnd)) {
-      state.lastTapTime = 0;
-      state.lastTapIndex = -1;
-      return false;
-    }
-
-    if (isDouble && onPathEnd) {
-      state.lastTapTime = 0;
-      state.lastTapIndex = -1;
-      tryCommitPath();
-      return true;
-    }
-
-    state.lastTapTime = now;
-    state.lastTapIndex = index;
-    return false;
   }
 
   function onPointerDown(e) {
@@ -1377,12 +1370,21 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
     e.preventDefault();
+
+    // Double-tap the current end letter to submit (checked before path changes).
+    if (shouldDoubleTapSubmit(index)) {
+      clearTapMemory();
+      tryCommitPath();
+      return;
+    }
+
     state.dragging = true;
     state.pointerId = e.pointerId;
     state.dragMoved = false;
     state.dragStartX = e.clientX;
     state.dragStartY = e.clientY;
     state.gestureChangedPath = false;
+    state.gestureStartLen = state.path.length;
     if (els.grid.setPointerCapture) {
       try {
         els.grid.setPointerCapture(e.pointerId);
@@ -1428,8 +1430,8 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
     var index = indexFromPoint(e.clientX, e.clientY);
-    var gestureChangedPath = state.gestureChangedPath;
     var dragMoved = state.dragMoved;
+    var gestureChangedPath = state.gestureChangedPath;
     if (els.grid.releasePointerCapture && state.pointerId != null) {
       try {
         els.grid.releasePointerCapture(state.pointerId);
@@ -1438,7 +1440,21 @@ if (typeof module !== "undefined" && module.exports) {
       }
     }
     endDrag();
-    noteTap(index, gestureChangedPath, dragMoved);
+
+    // Swipe: release after dragging through letters submits.
+    if (dragMoved && gestureChangedPath && canSubmitPath()) {
+      clearTapMemory();
+      tryCommitPath();
+      return;
+    }
+
+    // Click-built path: remember end taps so a second tap submits.
+    if (canSubmitPath() && index === pathEndIndex()) {
+      recordEndTap(index);
+      return;
+    }
+
+    clearTapMemory();
   }
 
   function onWindowPointerUp(e) {
@@ -1496,6 +1512,16 @@ if (typeof module !== "undefined" && module.exports) {
     clearPath();
     setStatus("Path cleared.");
   });
+  if (els.submit) {
+    els.submit.addEventListener("click", function () {
+      if (!canSubmitPath()) {
+        setStatus("Build a path of at least " + utils.MIN_WORD_LEN + " letters first.");
+        return;
+      }
+      clearTapMemory();
+      tryCommitPath();
+    });
+  }
   els.reset.addEventListener("click", function () {
     state.found = [];
     saveProgress();
