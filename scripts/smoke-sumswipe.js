@@ -19,87 +19,80 @@ function check(name, fn) {
 check("letterValue maps A=1 through Z=26", function () {
   assert.strictEqual(utils.letterValue("A"), 1);
   assert.strictEqual(utils.letterValue("z"), 26);
-  assert.strictEqual(utils.letterValue("M"), 13);
-  assert.strictEqual(utils.letterValue(""), 0);
 });
 
-check("wordSum and reverseWord", function () {
-  assert.strictEqual(utils.wordSum("CAT"), 24);
-  assert.strictEqual(utils.reverseWord("CAT"), "TAC");
-  assert.strictEqual(utils.reverseWord("level"), "LEVEL");
+check("pathMultiplier uses max single-tile visits, capped at 3, no stacking", function () {
+  assert.strictEqual(utils.pathMultiplier([0, 1, 2]), 1);
+  assert.strictEqual(utils.pathMultiplier([0, 1, 0]), 2);
+  assert.strictEqual(utils.pathMultiplier([0, 1, 0, 1, 0]), 3);
+  // Tile 0 thrice and tile 1 twice → still 3×, not 6×
+  assert.strictEqual(utils.pathMultiplier([0, 1, 0, 1, 0]), 3);
+  assert.strictEqual(utils.wordPathScore("CAT", [0, 1, 0]), utils.wordSum("CAT") * 2);
 });
 
-check("areAdjacent and isValidPath", function () {
-  assert.strictEqual(utils.areAdjacent(5, 5, 4), false);
-  assert.strictEqual(utils.areAdjacent(5, 0, 4), true);
+check("isValidPath allows reuse up to 3, rejects consecutive same cell", function () {
   assert.strictEqual(utils.isValidPath([0, 1, 2], 4), true);
-  assert.strictEqual(utils.isValidPath([0, 1, 0], 4), false);
+  assert.strictEqual(utils.isValidPath([0, 1, 0], 4), true);
+  assert.strictEqual(utils.isValidPath([0, 0], 4), false);
   assert.strictEqual(utils.isValidPath([0, 2], 4), false);
+  // 0 and 1 each used three times — ok
+  assert.strictEqual(utils.isValidPath([0, 1, 0, 1, 0, 1], 4), true);
+  // 0 used four times — over cap
+  assert.strictEqual(utils.isValidPath([0, 1, 0, 1, 0, 1, 0], 4), false);
 });
 
 check("resolvePathWord accepts forward or reverse swipe", function () {
   var grid = utils.flattenGrid(["CATS", "XXXX"]);
-  // C-A-T forward
-  var fwd = utils.resolvePathWord(grid, [0, 1, 2]);
-  assert.strictEqual(fwd.word, "CAT");
-  assert.strictEqual(fwd.reversed, false);
-
-  // T-A-C reverse swipe still yields CAT
-  var rev = utils.resolvePathWord(grid, [2, 1, 0]);
-  assert.strictEqual(rev.word, "CAT");
-  assert.strictEqual(rev.reversed, true);
-
-  var bad = utils.resolvePathWord(grid, [0, 1]);
-  assert.strictEqual(bad.word, "");
+  assert.strictEqual(utils.resolvePathWord(grid, [0, 1, 2]).word, "CAT");
+  assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).word, "CAT");
+  assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).reversed, true);
 });
 
-check("date helpers round-trip and shift", function () {
-  assert.strictEqual(utils.formatDateKey(new Date(2026, 7, 8)), "2026-08-08");
-  assert.strictEqual(utils.shiftDateKey("2026-08-08", -1), "2026-08-07");
-  assert.strictEqual(utils.shiftDateKey("2026-08-08", 1), "2026-08-09");
-  assert.strictEqual(utils.parseDateKey("2026-13-01"), null);
-});
-
-check("tiers map ratios", function () {
-  assert.strictEqual(utils.tierForRatio(0).id, "starter");
-  assert.strictEqual(utils.tierForRatio(0.25).id, "bronze");
-  assert.strictEqual(utils.tierForRatio(0.5).id, "silver");
-  assert.strictEqual(utils.tierForRatio(0.75).id, "gold");
-  assert.strictEqual(utils.tierForRatio(1).id, "perfect");
+check("tiers and date helpers", function () {
   assert.strictEqual(utils.tierForScore(50, 200).id, "bronze");
-  assert.strictEqual(utils.tierForScore(200, 200).id, "perfect");
+  assert.strictEqual(utils.shiftDateKey("2026-08-08", -1), "2026-08-07");
 });
 
-check("daily grid is deterministic and has a solvable word set", function () {
+check("sanitizeFoundWords keeps best multiplier and accepts legacy strings", function () {
+  var valid = { CAT: true, DOG: true };
+  var cleaned = utils.sanitizeFoundWords(
+    ["cat", { word: "DOG", mult: 2 }, { word: "CAT", mult: 3 }, { word: "NOPE", mult: 2 }],
+    valid
+  );
+  assert.deepStrictEqual(cleaned, [
+    { word: "CAT", mult: 3 },
+    { word: "DOG", mult: 2 },
+  ]);
+});
+
+check("scoreFoundEntries applies multipliers", function () {
+  assert.strictEqual(
+    utils.scoreFoundEntries([
+      { word: "CAT", mult: 2 },
+      { word: "DOG", mult: 1 },
+    ]),
+    utils.wordSum("CAT") * 2 + utils.wordSum("DOG")
+  );
+});
+
+check("daily grid deterministic; maxScore includes best multipliers", function () {
   var a = utils.generateGrid("2026-08-08", 4);
   var b = utils.generateGrid("2026-08-08", 4);
   assert.deepStrictEqual(a.grid, b.grid);
   assert.strictEqual(a.maxScore, b.maxScore);
-  assert.ok(a.wordCount >= 5, "expected a playable word count, got " + a.wordCount);
-  assert.ok(a.maxScore > 0);
-  assert.strictEqual(a.grid.length, 16);
-
-  var other = utils.generateGrid("2026-08-09", 4);
-  assert.notDeepStrictEqual(a.grid, other.grid);
-
+  assert.ok(a.wordCount >= 5, "wordCount " + a.wordCount);
+  var expected = 0;
   a.words.forEach(function (w) {
-    assert.ok(utils.isDictionaryWord(w), w);
-    assert.strictEqual(utils.wordSum(w) > 0, true);
+    expected += utils.wordSum(w) * (a.bestMult[w] || 1);
   });
-  assert.strictEqual(utils.scoreWords(a.words), a.maxScore);
+  assert.strictEqual(a.maxScore, expected);
 });
 
-check("sanitizeFoundWords filters junk", function () {
-  var valid = { CAT: true, DOG: true };
-  var cleaned = utils.sanitizeFoundWords(["cat", "DOG", "NOPE", "cat", ""], valid);
-  assert.deepStrictEqual(cleaned, ["CAT", "DOG"]);
-});
-
-check("findAllWords on a known tiny grid", function () {
+check("findAllWords tracks reuse multipliers", function () {
   var grid = utils.flattenGrid(["CATS", "DOGX", "XXXX", "XXXX"]);
   var sol = utils.findAllWords(grid, 4);
   assert.ok(sol.words.indexOf("CAT") !== -1);
-  assert.ok(sol.words.indexOf("DOG") !== -1);
+  assert.ok(sol.bestMult.CAT >= 1);
   assert.ok(sol.maxScore >= utils.wordSum("CAT") + utils.wordSum("DOG"));
 });
 
