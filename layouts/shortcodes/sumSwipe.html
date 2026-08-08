@@ -1,0 +1,57 @@
+<div class="tool sumswipe" id="sumSwipeTool">
+  <div class="ss-header">
+    <div class="ss-header-text">
+      <h3 id="ssTitle" class="ss-title">SumSwipe</h3>
+      <p id="ssBlurb" class="ss-blurb tool-hint"></p>
+    </div>
+    <p id="ssProgress" class="ss-progress" aria-live="polite"></p>
+  </div>
+
+  <div class="ss-layout">
+    <div class="ss-play">
+      <div class="ss-live" aria-live="polite">
+        <div class="ss-live-row">
+          <span class="ss-live-label">Word</span>
+          <strong id="ssLiveWord" class="ss-live-word">—</strong>
+        </div>
+        <div class="ss-live-row">
+          <span class="ss-live-label">Sum</span>
+          <strong id="ssLiveSum" class="ss-live-sum">—</strong>
+        </div>
+        <p id="ssLiveEq" class="ss-live-eq">Swipe through letters to build a word.</p>
+      </div>
+
+      <div class="ss-board-wrap">
+        <div
+          id="ssGrid"
+          class="ss-grid"
+          role="grid"
+          aria-label="SumSwipe letter grid"
+        ></div>
+        <svg id="ssPathSvg" class="ss-path-svg" aria-hidden="true"></svg>
+      </div>
+
+      <p id="ssStatus" class="tool-status" role="status" aria-live="polite"></p>
+
+      <div class="tool-actions ss-actions">
+        <button type="button" id="ssPrev" class="tool-button--secondary">Previous</button>
+        <button type="button" id="ssNext">Next puzzle</button>
+        <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
+        <button type="button" id="ssHint" class="tool-button--secondary">Hint</button>
+        <button type="button" id="ssResetPuzzle" class="tool-button--secondary">Reset puzzle</button>
+      </div>
+    </div>
+
+    <aside class="ss-sidebar">
+      <h4 class="ss-sidebar-title">Targets</h4>
+      <p class="tool-hint">Find a real word whose letter values add up to each number.</p>
+      <ul id="ssTargets" class="ss-targets"></ul>
+      <div class="ss-legend">
+        <p class="ss-legend-title">Scoring</p>
+        <p class="tool-hint">A=1, B=2, … Z=26. Adjacent includes diagonals. No cell reuse.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="/js/sumswipe.js"></script>
