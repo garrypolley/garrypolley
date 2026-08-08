@@ -21,7 +21,7 @@ When sharing a Netlify deploy preview with the user:
 
 - Use **exactly** the URL Netlify reports — usually the `netlify/garrypolley/deploy-preview` status `target_url` on the PR. Example shape: `deploy-preview-<PR#>--garrypolley.netlify.app` (note the double hyphen).
 - Do **not** invent hosts, rewrite the subdomain, or append path segments (`/tool/...`, `/post/...`, etc.) when giving “the preview URL.”
-- Point people at that root preview link; they can use the site nav (Home / Posts / Recipes / Tools / Contact) from there.
+- Point people at that root preview link; they can use the site nav (Home / Posts / Recipes / Tools / Games / Contact) from there.
 - Production remains `https://garrypolley.com` after merge to `master`.
 
 **Chat / markdown link gotcha:** Netlify preview hostnames contain `--`. Many chat UIs and markdown linkifiers split or rewrite that, so the clickable link does not match the visible text. Avoid bare autolinked URLs. Prefer one of:
@@ -56,10 +56,11 @@ hugo --gc --minify  # production-like build → public/
 | `content/post/` | Blog posts (Markdown) |
 | `content/recipe/` | Recipes (Markdown + structured front matter) |
 | `content/tool/` | In-browser web tools (Markdown + shortcodes/JS) |
+| `content/game/` | In-browser games (Markdown + shortcodes/JS) |
 | `content/contact.html`, `thank-you.html` | Contact + form success (HTML content pages) |
-| `layouts/` | Theme overrides (recipe/tool templates + shortcodes) |
+| `layouts/` | Theme overrides (recipe/tool/game templates + shortcodes) |
 | `static/` | CSS, images, JS, favicon (copied as-is) |
-| `archetypes/` | `hugo new` templates for post/recipe/tool |
+| `archetypes/` | `hugo new` templates for post/recipe/tool/game |
 | `netlify.toml` | Build command, redirects, preview base URL |
 
 ## Content conventions
@@ -89,8 +90,18 @@ hugo --gc --minify  # production-like build → public/
 - Front matter: `title`, `slug`, `date`, `short`, `draft`
 - Permalinks: `/tool/:slug/`
 - Keep interactive UI in shortcodes and/or `static/js/` + `static/css/tool.css`
-- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`), SumSwipe (`{{< sumSwipe >}}` — daily word-sum hunt with 0–9 log rating)
+- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`)
 - Tools are navigable via the Tools menu; they are not included in `mainSections` (home feed)
+
+### Games (`content/game/`)
+
+- Prefer `hugo new game/my-slug.md` (uses `archetypes/game.md`)
+- Front matter: `title`, `slug`, `date`, `short`, `draft`
+- Permalinks: `/game/:slug/`
+- Interactive UI can reuse tool shortcodes/JS/CSS (`static/css/tool.css` is already global)
+- Existing games: SumSwipe (`{{< sumSwipe >}}` — daily word-sum hunt with 0–9 log rating)
+- Games are navigable via the Games menu; they are not included in `mainSections` (home feed)
+- Old `/tool/sumswipe/` redirects to `/game/sumswipe/`
 
 ### Contact
 

@@ -10,6 +10,7 @@ pygmentsUseClasses = false  # Add inline styles, no need to compile extra CSS
   post = "/:year/:month/:day/:slug/"
   recipe = "/recipe/:slug/"
   tool = "/tool/:slug/"
+  game = "/game/:slug/"
 
 [menu]
 
@@ -36,6 +37,12 @@ name = "Tools"
 weight = 350
 identifier = "tool"
 url = "/tool/"
+
+[[menu.main]]
+name = "Games"
+weight = 360
+identifier = "game"
+url = "/game/"
 
 [[menu.main]]
 name = "Contact"

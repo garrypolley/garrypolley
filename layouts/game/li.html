@@ -1,0 +1,6 @@
+<li>
+  <header class="listing-title"><a href="{{ .Permalink }}">{{ .Title }}</a></header>
+  {{ with .Params.Short }}
+  <div><p class="meta">{{ . }}</p></div>
+  {{ end }}
+</li>
