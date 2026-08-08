@@ -79,10 +79,10 @@ var SumSwipeUtils = (function () {
 
   /**
    * How a tap/click on `index` should affect an existing path.
-   * start | extend | backtrack | noop | ignore
+   * start | extend | backtrack | noop | restart
    * Returning to the immediate previous tile prefers reuse (extend) when
    * under the visit cap — needed for words like GAZA (A→Z→A). At the cap,
-   * that gesture undoes instead.
+   * that gesture undoes instead. Non-adjacent taps start a new path.
    */
   function pathTapAction(path, index, size) {
     if (!Array.isArray(path) || path.length === 0) {
@@ -102,7 +102,7 @@ var SumSwipeUtils = (function () {
     if (areAdjacent(last, index, size)) {
       return "extend";
     }
-    return "ignore";
+    return "restart";
   }
 
   /**
@@ -1320,8 +1320,10 @@ if (typeof module !== "undefined" && module.exports) {
 
   function applyTapToPath(index) {
     var action = utils.pathTapAction(state.path, index, state.puzzle.size);
-    if (action === "ignore") {
-      setStatus("Tap an adjacent letter to extend, or Clear path to start over.");
+    if (action === "restart") {
+      state.path = [];
+      clearTapMemory();
+      extendPath(index);
       return;
     }
     if (action === "noop") {
