@@ -19,10 +19,17 @@ Personal Hugo site for Garry Polley. Live at https://garrypolley.com. Source: ht
 
 When sharing a Netlify deploy preview with the user:
 
-- Use **exactly** the URL Netlify reports — usually the `netlify/garrypolley/deploy-preview` status `target_url` on the PR (e.g. `https://deploy-preview-N--garrypolley.netlify.app`).
+- Use **exactly** the URL Netlify reports — usually the `netlify/garrypolley/deploy-preview` status `target_url` on the PR. Example shape: `deploy-preview-<PR#>--garrypolley.netlify.app` (note the double hyphen).
 - Do **not** invent hosts, rewrite the subdomain, or append path segments (`/tool/...`, `/post/...`, etc.) when giving “the preview URL.”
 - Point people at that root preview link; they can use the site nav (Home / Posts / Recipes / Tools / Contact) from there.
 - Production remains `https://garrypolley.com` after merge to `master`.
+
+**Chat / markdown link gotcha:** Netlify preview hostnames contain `--`. Many chat UIs and markdown linkifiers split or rewrite that, so the clickable link does not match the visible text. Avoid bare autolinked URLs. Prefer one of:
+
+- Inline code (best for copy-paste): `` `https://deploy-preview-6--garrypolley.netlify.app` ``
+- Angle brackets: `<https://deploy-preview-6--garrypolley.netlify.app>`
+
+Do not use markdown links whose label text is a different URL than the href.
 
 Redirects in `netlify.toml`:
 
