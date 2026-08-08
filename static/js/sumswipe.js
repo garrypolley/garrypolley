@@ -79,7 +79,8 @@ var SumSwipeUtils = (function () {
 
   /**
    * How a tap/click on `index` should affect an existing path.
-   * start | extend | backtrack | noop | restart
+   * start | extend | backtrack | noop | ignore
+   * Non-adjacent taps are ignored so a miss doesn’t wipe the path.
    */
   function pathTapAction(path, index, size) {
     if (!Array.isArray(path) || path.length === 0) {
@@ -95,7 +96,45 @@ var SumSwipeUtils = (function () {
     if (areAdjacent(last, index, size)) {
       return "extend";
     }
-    return "restart";
+    return "ignore";
+  }
+
+  /**
+   * Focus index after keyboard Backspace pops the path end.
+   * Returns null when the path is empty afterward.
+   */
+  function focusAfterBackspace(pathAfterPop) {
+    if (!Array.isArray(pathAfterPop) || pathAfterPop.length === 0) {
+      return null;
+    }
+    return pathAfterPop[pathAfterPop.length - 1];
+  }
+
+  /**
+   * Whether a pointer-up should count toward double-tap submit.
+   * Path-changing gestures never count. Jitter on the path end still counts.
+   */
+  function countsTowardDoubleTap(opts) {
+    var gestureChangedPath = !!(opts && opts.gestureChangedPath);
+    var dragMoved = !!(opts && opts.dragMoved);
+    var onPathEnd = !!(opts && opts.onPathEnd);
+    if (gestureChangedPath) {
+      return false;
+    }
+    if (dragMoved && !onPathEnd) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Detect a double-tap on the same index within the window.
+   */
+  function isDoubleTap(now, lastTime, lastIndex, index, windowMs) {
+    if (index < 0 || lastIndex < 0) {
+      return false;
+    }
+    return now - lastTime <= windowMs && index === lastIndex;
   }
 
   function countTileVisits(indices) {
@@ -640,6 +679,9 @@ var SumSwipeUtils = (function () {
     rowColToIndex: rowColToIndex,
     areAdjacent: areAdjacent,
     pathTapAction: pathTapAction,
+    focusAfterBackspace: focusAfterBackspace,
+    countsTowardDoubleTap: countsTowardDoubleTap,
+    isDoubleTap: isDoubleTap,
     countTileVisits: countTileVisits,
     pathMultiplier: pathMultiplier,
     wordPathScore: wordPathScore,
@@ -1080,6 +1122,10 @@ if (typeof module !== "undefined" && module.exports) {
     state.path = [];
     state.dragging = false;
     state.pointerId = null;
+    state.dragMoved = false;
+    state.gestureChangedPath = false;
+    state.lastTapTime = 0;
+    state.lastTapIndex = -1;
     state.focusIndex = 0;
     restoreProgress();
     renderChrome();
@@ -1215,8 +1261,8 @@ if (typeof module !== "undefined" && module.exports) {
     return best;
   }
 
-  var DOUBLE_TAP_MS = 400;
-  var DRAG_MOVE_PX = 10;
+  var DOUBLE_TAP_MS = 550;
+  var DRAG_MOVE_PX = 22;
 
   function extendPath(index) {
     if (index < 0 || index >= state.puzzle.grid.length) {
@@ -1256,9 +1302,8 @@ if (typeof module !== "undefined" && module.exports) {
 
   function applyTapToPath(index) {
     var action = utils.pathTapAction(state.path, index, state.puzzle.size);
-    if (action === "restart") {
-      state.path = [];
-      extendPath(index);
+    if (action === "ignore") {
+      setStatus("Tap an adjacent letter to extend, or Clear path to start over.");
       return;
     }
     if (action === "noop") {
@@ -1277,30 +1322,46 @@ if (typeof module !== "undefined" && module.exports) {
     state.pointerId = null;
   }
 
-  function noteTap(index, moved) {
-    if (moved || index < 0) {
+  function noteTap(index, gestureChangedPath, dragMoved) {
+    if (index < 0) {
       state.lastTapTime = 0;
       state.lastTapIndex = -1;
       return false;
     }
+    var onPathEnd =
+      state.path.length >= utils.MIN_WORD_LEN &&
+      index === state.path[state.path.length - 1];
     var now = Date.now();
-    var isDouble =
-      now - state.lastTapTime <= DOUBLE_TAP_MS && index === state.lastTapIndex;
-    state.lastTapTime = now;
-    state.lastTapIndex = index;
-    if (!isDouble) {
+    var isDouble = utils.isDoubleTap(
+      now,
+      state.lastTapTime,
+      state.lastTapIndex,
+      index,
+      DOUBLE_TAP_MS
+    );
+    var counts = utils.countsTowardDoubleTap({
+      gestureChangedPath: gestureChangedPath,
+      dragMoved: dragMoved,
+      onPathEnd: onPathEnd,
+    });
+
+    // Path-changing / off-end drag: clear, unless this finishes a double on the end
+    // (allow a slightly jittery second tap to still submit).
+    if (!counts && !(isDouble && onPathEnd)) {
+      state.lastTapTime = 0;
+      state.lastTapIndex = -1;
       return false;
     }
-    // Double-tap the current path end to submit.
-    if (
-      state.path.length >= utils.MIN_WORD_LEN &&
-      index === state.path[state.path.length - 1]
-    ) {
+
+    if (isDouble && onPathEnd) {
       state.lastTapTime = 0;
       state.lastTapIndex = -1;
       tryCommitPath();
       return true;
     }
+
+    state.lastTapTime = now;
+    state.lastTapIndex = index;
     return false;
   }
 
@@ -1367,7 +1428,8 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
     var index = indexFromPoint(e.clientX, e.clientY);
-    var moved = state.dragMoved || state.gestureChangedPath;
+    var gestureChangedPath = state.gestureChangedPath;
+    var dragMoved = state.dragMoved;
     if (els.grid.releasePointerCapture && state.pointerId != null) {
       try {
         els.grid.releasePointerCapture(state.pointerId);
@@ -1376,7 +1438,7 @@ if (typeof module !== "undefined" && module.exports) {
       }
     }
     endDrag();
-    noteTap(index, moved);
+    noteTap(index, gestureChangedPath, dragMoved);
   }
 
   function onWindowPointerUp(e) {
@@ -1492,7 +1554,14 @@ if (typeof module !== "undefined" && module.exports) {
       e.preventDefault();
       if (state.path.length) {
         state.path.pop();
-        highlightPath();
+        state.lastTapTime = 0;
+        state.lastTapIndex = -1;
+        var focus = utils.focusAfterBackspace(state.path);
+        if (focus == null) {
+          highlightPath();
+        } else {
+          setFocusIndex(focus);
+        }
       }
     } else if (key === "Escape") {
       e.preventDefault();

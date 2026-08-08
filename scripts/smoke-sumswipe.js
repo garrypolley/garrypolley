@@ -44,12 +44,49 @@ check("resolvePathWord accepts forward or reverse swipe", function () {
   assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).reversed, true);
 });
 
-check("pathTapAction extends adjacent clicks and restarts otherwise", function () {
+check("pathTapAction extends adjacent clicks and ignores non-adjacent", function () {
   assert.strictEqual(utils.pathTapAction([], 0, 4), "start");
   assert.strictEqual(utils.pathTapAction([0], 0, 4), "noop");
   assert.strictEqual(utils.pathTapAction([0], 1, 4), "extend");
   assert.strictEqual(utils.pathTapAction([0, 1], 0, 4), "backtrack");
-  assert.strictEqual(utils.pathTapAction([0], 3, 4), "restart");
+  assert.strictEqual(utils.pathTapAction([0], 3, 4), "ignore");
+});
+
+check("focusAfterBackspace tracks the new path head", function () {
+  // Called with the path after pop().
+  assert.strictEqual(utils.focusAfterBackspace([0, 1]), 1);
+  assert.strictEqual(utils.focusAfterBackspace([0]), 0);
+  assert.strictEqual(utils.focusAfterBackspace([]), null);
+});
+
+check("double-tap helpers forgive end jitter but not path-changing gestures", function () {
+  assert.strictEqual(
+    utils.countsTowardDoubleTap({
+      gestureChangedPath: false,
+      dragMoved: true,
+      onPathEnd: true,
+    }),
+    true
+  );
+  assert.strictEqual(
+    utils.countsTowardDoubleTap({
+      gestureChangedPath: true,
+      dragMoved: false,
+      onPathEnd: true,
+    }),
+    false
+  );
+  assert.strictEqual(
+    utils.countsTowardDoubleTap({
+      gestureChangedPath: false,
+      dragMoved: true,
+      onPathEnd: false,
+    }),
+    false
+  );
+  assert.strictEqual(utils.isDoubleTap(1000, 600, 5, 5, 550), true);
+  assert.strictEqual(utils.isDoubleTap(1000, 400, 5, 5, 550), false);
+  assert.strictEqual(utils.isDoubleTap(1000, 900, 5, 4, 550), false);
 });
 
 check("log rating 0–9 and date helpers including history bound", function () {
