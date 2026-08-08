@@ -1,12 +1,27 @@
 /**
- * SumSwipe — swipe letter paths so A=1…Z=26 hits a target sum.
- * Touch / mouse / pen via Pointer Events. Pure helpers exported for smoke tests.
+ * SumSwipe — daily letter-grid word hunt.
+ * Swipe paths to find words (A=1…Z=26). Score tiers vs that day's max.
+ * Pure helpers exported for smoke tests.
  */
 var SumSwipeUtils = (function () {
   "use strict";
 
   var MIN_WORD_LEN = 3;
-  var MAX_WORD_LEN = 10;
+  var MAX_WORD_LEN = 8;
+  var GRID_SIZE = 4;
+
+  var TIERS = [
+    { id: "starter", label: "Starter", minRatio: 0 },
+    { id: "bronze", label: "Bronze", minRatio: 0.25 },
+    { id: "silver", label: "Silver", minRatio: 0.5 },
+    { id: "gold", label: "Gold", minRatio: 0.75 },
+    { id: "perfect", label: "Perfect", minRatio: 1 },
+  ];
+
+  // English-ish bag for playable daily grids (vowels weighted up).
+  var LETTER_BAG =
+    "EEEEEEEEEEEEAAAAAAAAAIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTT" +
+    "LLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ";
 
   function letterValue(ch) {
     if (typeof ch !== "string" || ch.length === 0) {
@@ -35,6 +50,10 @@ var SumSwipeUtils = (function () {
       return "";
     }
     return word.toUpperCase().replace(/[^A-Z]/g, "");
+  }
+
+  function reverseWord(word) {
+    return normalizeWord(word).split("").reverse().join("");
   }
 
   function indexToRowCol(index, size) {
@@ -103,10 +122,6 @@ var SumSwipeUtils = (function () {
     return out;
   }
 
-  /**
-   * Compact dictionary: puzzle answers + common short words that may appear as
-   * alternate finds on the grids. Kept small on purpose for a static site tool.
-   */
   var BASE_WORDS = [
     "ADD","AGE","AIR","AND","ANT","APE","ARC","ARE","ARK","ARM","ART","ASH","ASK",
     "BAG","BAT","BED","BEE","BET","BIG","BIT","BOX","BOY","BUS","BUT","BUY",
@@ -149,11 +164,12 @@ var SumSwipeUtils = (function () {
     "TACK","TACO","TAIL","TAKE","TALE","TALK","TALL","TAME","TANK","TAPE","TART","TASK","TAXI","TEAM","TEAR","TELL","TEND","TENT","TERM","TEST","TEXT","THAN","THAT","THAW","THEE","THEM","THEN","THEY","THIN","THIS","THUD","TICK","TIDE","TIDY","TIED","TIER","TILE","TILL","TILT","TIME","TINY","TIRE","TOAD","TOFU","TOIL","TOLD","TOLL","TOMB","TONE","TOOK","TOOL","TOPS","TORE","TORN","TOSS","TOTE","TOUR","TOWN","TOYS","TRAM","TRAP","TRAY","TREE","TREK","TRIM","TRIO","TRIP","TROT","TRUE","TUBE","TUCK","TUNA","TUNE","TURF","TURN","TUSK","TWIN","TYPE",
     "UGLY","UNDO","UNIT","UNTO","UPON","URGE","USED","USER","VAIN","VALE","VARY","VASE","VAST","VEIL","VEIN","VENT","VERB","VERY","VEST","VETO","VIAL","VIBE","VICE","VIEW","VILE","VINE","VISA","VOID","VOLT","VOTE",
     "WADE","WAGE","WAIL","WAIT","WAKE","WALK","WALL","WAND","WANE","WANT","WARD","WARM","WARN","WARP","WART","WARY","WASH","WASP","WAVE","WAVY","WEAK","WEAR","WEED","WEEK","WELD","WELL","WENT","WERE","WEST","WHAT","WHEN","WHIP","WHIZ","WIDE","WIFE","WILD","WILL","WILT","WIND","WINE","WING","WINK","WIPE","WIRE","WISE","WISH","WITH","WOLF","WOMB","WOOD","WOOL","WORD","WORE","WORK","WORM","WORN","WRAP","YARD","YARN","YAWN","YEAR","YELL","YELP","YOGA","YOKE","YOLK","YOUR","ZEAL","ZERO","ZEST","ZINC","ZONE","ZOOM",
-    // Puzzle answers + intentional extras
-    "CAT","DOG","MATH","PLUS","FUN","TILE","FINGER","FINE","MINUS","TIMES","EQUAL","ROUT",
-    "CUBE","OVAL","LINE","THINK","FOCUS","SMART","LOGIC","SOLVE","SWIPE","TRACE","SCORE",
-    "VALUE","TOTAL","PHONE","DIGIT","NUMBER","PUZZLE","BRAIN","CLUE","HINT","LEVEL","PATH",
-    "GRID","PLAY","GAME","TOUCH","SLIDE","COUNT","PRIME","ANGLE","SHAPE","POWER","PROOF",
+    "AFTER","AGAIN","AGENT","AGREE","AHEAD","ALARM","ALBUM","ALERT","ALIEN","ALIGN","ALIKE","ALIVE","ALLOW","ALONE","ALONG","ALTER","AMONG","ANGEL","ANGER","ANGLE","ANGRY","APART","APPLE","APPLY","ARENA","ARGUE","ARISE","ARMOR","ARROW","ASIDE","ASSET","AUDIO","AVOID","AWAIT","AWARD","AWARE","BADGE","BAKER","BASES","BASIC","BASIN","BASIS","BATCH","BEACH","BEANS","BEARD","BEARS","BEAST","BEGAN","BEGIN","BEING","BELLS","BELOW","BENCH","BERRY","BIRTH","BLACK","BLADE","BLAME","BLANK","BLAST","BLAZE","BLEED","BLEND","BLIND","BLOCK","BLOOD","BLOOM","BOARD","BOOST","BOOTH","BOUND","BRAIN","BRAND","BRASS","BRAVE","BREAD","BREAK","BREED","BRICK","BRIDE","BRIEF","BRING","BROAD","BROKE","BROOK","BROWN","BRUSH","BUILD","BUILT","BUYER",
+    "CABIN","CABLE","CANDY","CARGO","CARRY","CATCH","CAUSE","CHAIN","CHAIR","CHARM","CHART","CHASE","CHEAP","CHECK","CHEER","CHEST","CHIEF","CHILD","CHILL","CHINA","CHOSE","CHUNK","CIVIL","CLAIM","CLASS","CLEAN","CLEAR","CLERK","CLICK","CLIFF","CLIMB","CLING","CLOCK","CLOSE","CLOTH","CLOUD","COACH","COAST","COLOR","COMET","COMIC","CORAL","COSTS","COUCH","COULD","COUNT","COURT","COVER","CRAFT","CRANE","CRASH","CRAZY","CREAM","CREEK","CRIME","CRISP","CROSS","CROWD","CROWN","CRUEL","CRUSH","CURVE","CYCLE",
+    "DAILY","DAIRY","DANCE","DATED","DEALS","DEATH","DEBUT","DECAY","DECOR","DELAY","DELTA","DENSE","DEPTH","DIARY","DIGIT","DIRTY","DISCO","DIVER","DOUBT","DOUGH","DOZEN","DRAFT","DRAIN","DRAMA","DRANK","DRAWN","DREAM","DRESS","DRIED","DRIFT","DRILL","DRINK","DRIVE","DRONE","DROVE","DRUNK","DUSTY","EAGER","EAGLE","EARLY","EARTH","EASEL","EATEN","EIGHT","ELBOW","ELDER","ELECT","ELITE","EMAIL","EMPTY","ENEMY","ENJOY","ENTER","ENTRY","EQUAL","ERROR","ESSAY","EVENT","EVERY","EXACT","EXAMS","EXCEL","EXIST","EXTRA",
+    "FABLE","FACED","FACTS","FAINT","FAITH","FALSE","FANCY","FATAL","FAULT","FAVOR","FEAST","FENCE","FEVER","FIBER","FIELD","FIFTH","FIFTY","FIGHT","FINAL","FINDS","FIRST","FIXED","FLAME","FLASH","FLEET","FLESH","FLOAT","FLOOD","FLOOR","FLOUR","FLUID","FOCUS","FORCE","FORMS","FORTH","FORTY","FORUM","FOUND","FRAME","FRANK","FRESH","FRIED","FRONT","FROST","FROWN","FRUIT","FULLY","FUNNY","GIANT","GIVEN","GLASS","GLOBE","GLORY","GOING","GRACE","GRADE","GRAIN","GRAND","GRANT","GRAPE","GRAPH","GRASP","GRASS","GRAVE","GREAT","GREEN","GREET","GRIEF","GRILL","GROSS","GROUP","GROVE","GROWN","GUARD","GUESS","GUEST","GUIDE","GUILD","HABIT","HAPPY","HARSH","HASTE","HEART","HEAVY","HEDGE","HELLO","HENCE","HORSE","HOTEL","HOUND","HOURS","HOUSE","HUMAN","HUMOR","HURRY","IDEAL","IMAGE","IMPLY","INDEX","INNER","INPUT","INTRO","IRON","ISSUE","IVORY",
+    "JEANS","JOINS","JOINT","JOKER","JUDGE","JUICE","KINDS","KNEEL","KNIFE","KNOCK","KNOWN","LABEL","LABOR","LARGER","LASER","LATER","LAUGH","LAYER","LEARN","LEASE","LEAST","LEAVE","LEGAL","LEMON","LEVEL","LIGHT","LIKED","LIMIT","LINED","LINEN","LIVER","LOANS","LOBBY","LOCAL","LODGE","LOGIC","LOOSE","LORRY","LOSER","LOVER","LOWER","LOYAL","LUCKY","LUNCH","LYRIC","MACRO","MAGIC","MAJOR","MAKER","MANGO","MANOR","MAPLE","MARCH","MARRY","MATCH","MAYBE","MAYOR","MEANS","MEDAL","MEDIA","MERCY","MERGE","MERIT","MERRY","METAL","METER","MIGHT","MINOR","MINUS","MIXED","MODEL","MODEM","MONEY","MONTH","MORAL","MOTOR","MOUNT","MOUSE","MOUTH","MOVED","MOVIE","MUSIC","NAIVE","NAKED","NAMED","NASTY","NAVAL","NEEDS","NERVE","NEVER","NEWER","NEWLY","NIGHT","NINTH","NOBLE","NOISE","NOISY","NORTH","NOTED","NOVEL","NURSE","OCCUR","OCEAN","OFFER","OFTEN","OLDER","OLIVE","ONION","ONSET","OPERA","ORBIT","ORDER","ORGAN","OTHER","OUGHT","OUNCE","OUTER","OWNED","OWNER","OXIDE","PAINT","PANEL","PANIC","PAPER","PARTY","PASTA","PASTE","PATCH","PAUSE","PEACE","PEACH","PEARL","PHASE","PHONE","PHOTO","PIANO","PIECE","PILOT","PITCH","PIXEL","PLACE","PLAIN","PLANE","PLANT","PLATE","PLAYS","PLAZA","PLEAD","PLUCK","POINT","PORCH","POUND","POWER","PRESS","PRICE","PRIDE","PRIME","PRINT","PRIOR","PRIZE","PROBE","PROOF","PROUD","PROVE","PROXY","PSALM","PULSE","PUNCH","PUPIL","PURSE","QUEEN","QUERY","QUEST","QUEUE","QUICK","QUIET","QUILT","QUITE","QUOTE",
+    "RADIO","RAISE","RALLY","RANGE","RAPID","RATES","RATIO","REACH","REACT","READY","REALM","REBEL","REFER","REIGN","RELAX","RELAY","RENEW","REPAY","REPLY","RIDER","RIDGE","RIGHT","RIGID","RIVER","ROBOT","ROCKY","ROGUE","ROMAN","ROOMS","ROUGH","ROUND","ROUTE","ROYAL","RUGBY","RULER","RUMOR","RURAL","SAFER","SAINT","SALAD","SALES","SALON","SANDY","SAUCE","SCALE","SCARE","SCENE","SCENT","SCORE","SCOUT","SCRAP","SENSE","SERVE","SETUP","SEVEN","SHADE","SHAKE","SHALL","SHAME","SHAPE","SHARE","SHARK","SHARP","SHEEP","SHEER","SHEET","SHELF","SHELL","SHIFT","SHINE","SHIRT","SHOCK","SHOOT","SHORE","SHORT","SHOUT","SHOWN","SIDED","SIGHT","SIGNS","SILLY","SINCE","SIXTH","SIXTY","SIZED","SKATE","SKILL","SKIRT","SKULL","SLATE","SLEEP","SLICE","SLIDE","SLOPE","SMALL","SMART","SMELL","SMILE","SMOKE","SNAKE","SNEAK","SOLAR","SOLID","SOLVE","SORRY","SOUND","SOUTH","SPACE","SPADE","SPARE","SPARK","SPEAK","SPEAR","SPEED","SPELL","SPEND","SPENT","SPICE","SPIKE","SPINE","SPLIT","SPOIL","SPOKE","SPOON","SPORT","SPRAY","SQUAD","STACK","STAFF","STAGE","STAIN","STAIR","STAKE","STALE","STAMP","STAND","STARE","STARK","START","STATE","STEAK","STEAL","STEAM","STEEL","STEEP","STEER","STICK","STIFF","STILL","STOCK","STONE","STOOD","STOOL","STORE","STORM","STORY","STOVE","STRAP","STRAW","STRAY","STRIP","STUCK","STUDY","STUFF","STYLE","SUGAR","SUITE","SUNNY","SUPER","SURGE","SWAMP","SWEAR","SWEAT","SWEEP","SWEET","SWELL","SWEPT","SWIFT","SWING","SWIPE","SWORD","TABLE","TAKEN","TALES","TASTE","TAXES","TEACH","TEAMS","TEASE","TEETH","TEMPO","TENSE","TERMS","THANK","THEFT","THEIR","THEME","THERE","THESE","THICK","THIEF","THING","THINK","THIRD","THOSE","THREE","THREW","THROW","THUMB","TIGER","TIGHT","TIMES","TIRED","TITLE","TODAY","TOKEN","TOOTH","TOPIC","TOTAL","TOUCH","TOUGH","TOWEL","TOWER","TOXIC","TRACE","TRACK","TRADE","TRAIL","TRAIN","TRAIT","TRASH","TREAT","TREND","TRIAL","TRIBE","TRICK","TRIED","TRIPS","TROLL","TROOP","TRUCK","TRULY","TRUNK","TRUST","TRUTH","TUTOR","TWICE","TWIST","TYPES","UNCLE","UNDER","UNIFY","UNION","UNITE","UNITY","UNTIL","UPPER","UPSET","URBAN","USAGE","USUAL","UTTER","VAGUE","VALID","VALUE","VALVE","VAPOR","VAULT","VENUE","VIDEO","VIVID","VOCAL","VOICE","VOTER","WAGES","WAGON","WAIST","WASTE","WATCH","WATER","WEARY","WEAVE","WEDGE","WEIGH","WEIRD","WHALE","WHEAT","WHEEL","WHERE","WHICH","WHILE","WHITE","WHOLE","WHOSE","WIDEN","WIDTH","WOMAN","WOMEN","WORLD","WORRY","WORSE","WORST","WORTH","WOULD","WOUND","WRIST","WRITE","WRONG","WROTE","YACHT","YEARS","YIELD","YOUNG","YOUTH","ZEBRA"
   ];
 
   var DICTIONARY = (function () {
@@ -172,136 +188,254 @@ var SumSwipeUtils = (function () {
     return !!DICTIONARY[w];
   }
 
-  function addDictionaryWords(words) {
-    if (!Array.isArray(words)) {
-      return;
+  /**
+   * Resolve a swiped path to a dictionary word.
+   * Accepts the forward spelling or the reverse (swipe either direction).
+   * If both are valid and different, prefer the forward swipe.
+   */
+  function resolvePathWord(grid, indices) {
+    var forward = pathToWord(grid, indices);
+    var backward = reverseWord(forward);
+    var forwardOk = isDictionaryWord(forward);
+    var backwardOk = isDictionaryWord(backward);
+    if (forwardOk) {
+      return { word: forward, reversed: false };
     }
-    for (var i = 0; i < words.length; i++) {
-      var w = normalizeWord(words[i]);
-      if (w) {
-        DICTIONARY[w] = true;
-      }
+    if (backwardOk) {
+      return { word: backward, reversed: true };
     }
+    return { word: "", reversed: false, attempted: forward };
   }
 
-  /**
-   * Curated puzzles with unique target sums. Paths verified for intended answers.
-   * Any dictionary word that hits a remaining target sum counts as a find.
-   */
-  var PUZZLES = [
-    {
-      id: "warm-up",
-      title: "Warm-up",
-      blurb: "Swipe adjacent letters (including diagonals). A=1 … Z=26. Hit each target sum.",
-      size: 4,
-      rows: ["CATS", "DOGU", "MATH", "PLUS"],
-      targets: [
-        { sum: 24, hint: "A small pet", answer: "CAT" },
-        { sum: 26, hint: "Man's best friend", answer: "DOG" },
-        { sum: 42, hint: "School subject", answer: "MATH" },
-        { sum: 68, hint: "Addition sign word", answer: "PLUS" },
-      ],
-    },
-    {
-      id: "touch-trail",
-      title: "Touch Trail",
-      blurb: "Keep your finger down and drag — longer paths welcome.",
-      size: 4,
-      rows: ["FING", "UNGE", "NGER", "TILE"],
-      targets: [
-        { sum: 41, hint: "A good time", answer: "FUN" },
-        { sum: 46, hint: "A square on the board", answer: "TILE" },
-        { sum: 59, hint: "Digit on your hand", answer: "FINGER" },
-        { sum: 34, hint: "Nice quality", answer: "FINE" },
-      ],
-    },
-    {
-      id: "operators",
-      title: "Operators",
-      blurb: "Math vocabulary hiding in the grid.",
-      size: 5,
-      rows: ["TIMES", "PLUSX", "MINUS", "EQUAL", "ROOTY"],
-      targets: [
-        { sum: 66, hint: "Multiplication word", answer: "TIMES" },
-        { sum: 68, hint: "Opposite of minus", answer: "PLUS" },
-        { sum: 76, hint: "Subtraction word", answer: "MINUS" },
-        { sum: 56, hint: "Same on both sides", answer: "EQUAL" },
-        { sum: 74, hint: "A path taken", answer: "ROUT" },
-      ],
-    },
-    {
-      id: "shape-up",
-      title: "Shape Up",
-      blurb: "Geometry-flavored finds.",
-      size: 4,
-      rows: ["CUBE", "OVAL", "AREA", "LINE"],
-      targets: [
-        { sum: 31, hint: "Six faces", answer: "CUBE" },
-        { sum: 50, hint: "Egg-shaped", answer: "OVAL" },
-        { sum: 25, hint: "Length × width", answer: "AREA" },
-        { sum: 40, hint: "Straight mark", answer: "LINE" },
-      ],
-    },
-    {
-      id: "brainy",
-      title: "Brainy",
-      blurb: "Think, then swipe.",
-      size: 5,
-      rows: ["THINK", "FOCUS", "SMART", "LOGIC", "SOLVE"],
-      targets: [
-        { sum: 62, hint: "Use your head", answer: "THINK" },
-        { sum: 64, hint: "Concentrate", answer: "FOCUS" },
-        { sum: 71, hint: "Clever", answer: "SMART" },
-        { sum: 46, hint: "Reasoning", answer: "LOGIC" },
-        { sum: 73, hint: "Find the answer", answer: "SOLVE" },
-      ],
-    },
-    {
-      id: "swipe-lab",
-      title: "Swipe Lab",
-      blurb: "Phone-friendly finale — drag, swipe, and score.",
-      size: 5,
-      rows: ["SWIPE", "TRACE", "SCORE", "VALUE", "TOTAL"],
-      targets: [
-        { sum: 72, hint: "Finger gesture", answer: "SWIPE" },
-        { sum: 47, hint: "Follow a path", answer: "TRACE" },
-        { sum: 60, hint: "Points earned", answer: "SCORE" },
-        { sum: 61, hint: "Letter worth", answer: "VALUE" },
-        { sum: 68, hint: "Grand sum", answer: "TOTAL" },
-      ],
-    },
-  ];
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
 
-  PUZZLES.forEach(function (p) {
-    addDictionaryWords(
-      p.targets.map(function (t) {
-        return t.answer;
-      })
+  function hashDateKey(dateKey) {
+    var h = 2166136261;
+    for (var i = 0; i < dateKey.length; i++) {
+      h ^= dateKey.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function formatDateKey(date) {
+    var y = date.getFullYear();
+    var m = date.getMonth() + 1;
+    var d = date.getDate();
+    return (
+      y +
+      "-" +
+      (m < 10 ? "0" : "") +
+      m +
+      "-" +
+      (d < 10 ? "0" : "") +
+      d
     );
-  });
+  }
 
-  function getPuzzles() {
-    return PUZZLES.map(function (p) {
-      return {
-        id: p.id,
-        title: p.title,
-        blurb: p.blurb,
-        size: p.size,
-        rows: p.rows.slice(),
-        grid: flattenGrid(p.rows),
-        targets: p.targets.map(function (t) {
-          return { sum: t.sum, hint: t.hint, answer: t.answer };
-        }),
-      };
-    });
+  function parseDateKey(dateKey) {
+    var parts = String(dateKey).split("-");
+    if (parts.length !== 3) {
+      return null;
+    }
+    var y = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    var d = parseInt(parts[2], 10);
+    if (!y || !m || !d) {
+      return null;
+    }
+    var dt = new Date(y, m - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) {
+      return null;
+    }
+    return dt;
+  }
+
+  function shiftDateKey(dateKey, deltaDays) {
+    var dt = parseDateKey(dateKey);
+    if (!dt) {
+      return dateKey;
+    }
+    dt.setDate(dt.getDate() + deltaDays);
+    return formatDateKey(dt);
+  }
+
+  function todayKey(now) {
+    return formatDateKey(now || new Date());
+  }
+
+  function countVowels(grid) {
+    var n = 0;
+    for (var i = 0; i < grid.length; i++) {
+      if ("AEIOU".indexOf(grid[i]) !== -1) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  function generateGrid(dateKey, size) {
+    size = size || GRID_SIZE;
+    var rand = mulberry32(hashDateKey(dateKey + ":grid"));
+    var cells = size * size;
+    var best = null;
+
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var grid = [];
+      for (var i = 0; i < cells; i++) {
+        grid.push(LETTER_BAG.charAt(Math.floor(rand() * LETTER_BAG.length)));
+      }
+      if (countVowels(grid) < 4) {
+        continue;
+      }
+      var solution = findAllWords(grid, size);
+      if (!best || solution.words.length > best.words.length) {
+        best = { grid: grid, solution: solution };
+      }
+      if (solution.words.length >= 12 && solution.maxScore >= 120) {
+        break;
+      }
+    }
+
+    if (!best) {
+      var fallback = [];
+      for (var j = 0; j < cells; j++) {
+        fallback.push(LETTER_BAG.charAt(j % LETTER_BAG.length));
+      }
+      best = { grid: fallback, solution: findAllWords(fallback, size) };
+    }
+
+    var rows = [];
+    for (var r = 0; r < size; r++) {
+      rows.push(best.grid.slice(r * size, r * size + size).join(""));
+    }
+
+    return {
+      dateKey: dateKey,
+      size: size,
+      grid: best.grid.slice(),
+      rows: rows,
+      words: best.solution.words.slice(),
+      maxScore: best.solution.maxScore,
+      wordCount: best.solution.words.length,
+    };
+  }
+
+  function findAllWords(grid, size) {
+    var found = {};
+    var neighbors = [];
+    var i;
+    for (i = 0; i < grid.length; i++) {
+      neighbors[i] = [];
+      for (var j = 0; j < grid.length; j++) {
+        if (areAdjacent(i, j, size)) {
+          neighbors[i].push(j);
+        }
+      }
+    }
+
+    function dfs(idx, path, letters) {
+      if (letters.length >= MIN_WORD_LEN && letters.length <= MAX_WORD_LEN) {
+        if (DICTIONARY[letters]) {
+          found[letters] = true;
+        }
+      }
+      if (letters.length >= MAX_WORD_LEN) {
+        return;
+      }
+      var nexts = neighbors[idx];
+      for (var n = 0; n < nexts.length; n++) {
+        var next = nexts[n];
+        if (path[next]) {
+          continue;
+        }
+        path[next] = true;
+        dfs(next, path, letters + grid[next]);
+        path[next] = false;
+      }
+    }
+
+    for (i = 0; i < grid.length; i++) {
+      var path = {};
+      path[i] = true;
+      dfs(i, path, grid[i]);
+    }
+
+    var words = Object.keys(found).sort();
+    var maxScore = 0;
+    for (i = 0; i < words.length; i++) {
+      maxScore += wordSum(words[i]);
+    }
+    return { words: words, maxScore: maxScore };
+  }
+
+  function scoreWords(words) {
+    var total = 0;
+    for (var i = 0; i < words.length; i++) {
+      total += wordSum(words[i]);
+    }
+    return total;
+  }
+
+  function tierForRatio(ratio) {
+    var current = TIERS[0];
+    for (var i = 0; i < TIERS.length; i++) {
+      if (ratio + 1e-9 >= TIERS[i].minRatio) {
+        current = TIERS[i];
+      }
+    }
+    return current;
+  }
+
+  function tierForScore(score, maxScore) {
+    if (!maxScore || maxScore <= 0) {
+      return tierForRatio(0);
+    }
+    return tierForRatio(score / maxScore);
+  }
+
+  function sanitizeFoundWords(raw, validSet) {
+    var out = [];
+    var seen = {};
+    if (!Array.isArray(raw)) {
+      return out;
+    }
+    for (var i = 0; i < raw.length; i++) {
+      var w = normalizeWord(raw[i]);
+      if (!w || seen[w]) {
+        continue;
+      }
+      if (validSet && !validSet[w]) {
+        continue;
+      }
+      if (!isDictionaryWord(w)) {
+        continue;
+      }
+      seen[w] = true;
+      out.push(w);
+    }
+    out.sort();
+    return out;
   }
 
   return {
     MIN_WORD_LEN: MIN_WORD_LEN,
     MAX_WORD_LEN: MAX_WORD_LEN,
+    GRID_SIZE: GRID_SIZE,
+    TIERS: TIERS,
     letterValue: letterValue,
     wordSum: wordSum,
     normalizeWord: normalizeWord,
+    reverseWord: reverseWord,
     indexToRowCol: indexToRowCol,
     rowColToIndex: rowColToIndex,
     areAdjacent: areAdjacent,
@@ -309,8 +443,19 @@ var SumSwipeUtils = (function () {
     pathToWord: pathToWord,
     flattenGrid: flattenGrid,
     isDictionaryWord: isDictionaryWord,
-    addDictionaryWords: addDictionaryWords,
-    getPuzzles: getPuzzles,
+    resolvePathWord: resolvePathWord,
+    mulberry32: mulberry32,
+    hashDateKey: hashDateKey,
+    formatDateKey: formatDateKey,
+    parseDateKey: parseDateKey,
+    shiftDateKey: shiftDateKey,
+    todayKey: todayKey,
+    generateGrid: generateGrid,
+    findAllWords: findAllWords,
+    scoreWords: scoreWords,
+    tierForRatio: tierForRatio,
+    tierForScore: tierForScore,
+    sanitizeFoundWords: sanitizeFoundWords,
   };
 })();
 
@@ -331,15 +476,16 @@ if (typeof module !== "undefined" && module.exports) {
   }
 
   var utils = SumSwipeUtils;
-  var puzzles = utils.getPuzzles();
-  var storageKey = "sumswipe-progress-v1";
+  var storageKey = "sumswipe-daily-v2";
 
   var state = {
-    puzzleIndex: 0,
+    dateKey: utils.todayKey(),
+    puzzle: null,
+    validSet: {},
+    found: [],
     path: [],
     dragging: false,
-    found: {},
-    revealed: {},
+    pointerId: null,
   };
 
   var els = {
@@ -351,23 +497,29 @@ if (typeof module !== "undefined" && module.exports) {
     liveWord: document.getElementById("ssLiveWord"),
     liveSum: document.getElementById("ssLiveSum"),
     liveEq: document.getElementById("ssLiveEq"),
-    targets: document.getElementById("ssTargets"),
+    scoreValue: document.getElementById("ssScoreValue"),
+    scoreMax: document.getElementById("ssScoreMax"),
+    tierLabel: document.getElementById("ssTierLabel"),
+    tierFill: document.getElementById("ssTierFill"),
+    tierList: document.getElementById("ssTierList"),
+    foundList: document.getElementById("ssFoundList"),
+    foundCount: document.getElementById("ssFoundCount"),
     status: document.getElementById("ssStatus"),
     prev: document.getElementById("ssPrev"),
     next: document.getElementById("ssNext"),
+    today: document.getElementById("ssToday"),
     clear: document.getElementById("ssClear"),
-    hint: document.getElementById("ssHint"),
     reset: document.getElementById("ssResetPuzzle"),
   };
 
-  function loadProgress() {
+  function loadAllProgress() {
     try {
       var raw = localStorage.getItem(storageKey);
       if (!raw) {
         return {};
       }
       var data = JSON.parse(raw);
-      return data && typeof data === "object" ? data : {};
+      return data && typeof data === "object" && !Array.isArray(data) ? data : {};
     } catch (e) {
       return {};
     }
@@ -375,27 +527,19 @@ if (typeof module !== "undefined" && module.exports) {
 
   function saveProgress() {
     try {
-      var all = loadProgress();
-      var puzzle = puzzles[state.puzzleIndex];
-      all[puzzle.id] = { found: state.found, revealed: state.revealed };
+      var all = loadAllProgress();
+      all[state.dateKey] = { found: state.found.slice() };
       localStorage.setItem(storageKey, JSON.stringify(all));
     } catch (e) {
       // ignore quota / private mode
     }
   }
 
-  function restorePuzzleProgress() {
-    var puzzle = puzzles[state.puzzleIndex];
-    var all = loadProgress();
-    var saved = all[puzzle.id];
-    state.found = {};
-    state.revealed = {};
-    if (saved && saved.found && typeof saved.found === "object") {
-      state.found = saved.found;
-    }
-    if (saved && saved.revealed && typeof saved.revealed === "object") {
-      state.revealed = saved.revealed;
-    }
+  function restoreProgress() {
+    var all = loadAllProgress();
+    var saved = all[state.dateKey];
+    var raw = saved && Array.isArray(saved.found) ? saved.found : [];
+    state.found = utils.sanitizeFoundWords(raw, state.validSet);
   }
 
   function setStatus(msg, kind) {
@@ -408,34 +552,115 @@ if (typeof module !== "undefined" && module.exports) {
     }
   }
 
-  function currentPuzzle() {
-    return puzzles[state.puzzleIndex];
+  function currentScore() {
+    return utils.scoreWords(state.found);
   }
 
-  function foundCount() {
-    return Object.keys(state.found).length;
+  function currentTier() {
+    return utils.tierForScore(currentScore(), state.puzzle.maxScore);
   }
 
-  function isComplete() {
-    return foundCount() >= currentPuzzle().targets.length;
+  function formatDisplayDate(dateKey) {
+    var dt = utils.parseDateKey(dateKey);
+    if (!dt) {
+      return dateKey;
+    }
+    return dt.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   }
 
   function renderChrome() {
-    var p = currentPuzzle();
-    els.title.textContent = p.title;
-    els.blurb.textContent = p.blurb;
+    var today = utils.todayKey();
+    var score = currentScore();
+    var tier = currentTier();
+    var ratio = state.puzzle.maxScore ? score / state.puzzle.maxScore : 0;
+
+    els.title.textContent = "SumSwipe";
+    els.blurb.textContent =
+      "Daily puzzle for " +
+      formatDisplayDate(state.dateKey) +
+      ". Swipe any word (either direction). Letter values A=1…Z=26 add to your score.";
     els.progress.textContent =
-      "Puzzle " +
-      (state.puzzleIndex + 1) +
-      " / " +
-      puzzles.length +
+      state.found.length +
+      " word" +
+      (state.found.length === 1 ? "" : "s") +
       " · " +
-      foundCount() +
+      score +
       " / " +
-      p.targets.length +
-      " found";
-    els.prev.disabled = state.puzzleIndex === 0;
-    els.next.disabled = state.puzzleIndex >= puzzles.length - 1;
+      state.puzzle.maxScore +
+      " pts";
+
+    els.scoreValue.textContent = String(score);
+    els.scoreMax.textContent = String(state.puzzle.maxScore);
+    els.tierLabel.textContent = tier.label;
+    els.tierLabel.dataset.tier = tier.id;
+    els.tierFill.style.width = Math.min(100, Math.round(ratio * 1000) / 10) + "%";
+    els.tierFill.dataset.tier = tier.id;
+    els.foundCount.textContent = String(state.found.length);
+
+    els.prev.disabled = false;
+    els.next.disabled = state.dateKey >= today;
+    els.today.disabled = state.dateKey === today;
+
+    renderTiers(ratio);
+  }
+
+  function renderTiers(ratio) {
+    els.tierList.innerHTML = "";
+    for (var i = 0; i < utils.TIERS.length; i++) {
+      var t = utils.TIERS[i];
+      var li = document.createElement("li");
+      li.className = "ss-tier-item";
+      if (ratio + 1e-9 >= t.minRatio) {
+        li.classList.add("is-reached");
+      }
+      if (currentTier().id === t.id) {
+        li.classList.add("is-current");
+      }
+      var name = document.createElement("span");
+      name.className = "ss-tier-name";
+      name.textContent = t.label;
+      var need = document.createElement("span");
+      need.className = "ss-tier-need";
+      need.textContent =
+        t.minRatio >= 1
+          ? "100%"
+          : Math.round(t.minRatio * 100) + "%";
+      li.appendChild(name);
+      li.appendChild(need);
+      els.tierList.appendChild(li);
+    }
+  }
+
+  function renderFound() {
+    els.foundList.innerHTML = "";
+    var words = state.found.slice().sort(function (a, b) {
+      return utils.wordSum(b) - utils.wordSum(a) || a.localeCompare(b);
+    });
+    if (!words.length) {
+      var empty = document.createElement("li");
+      empty.className = "ss-found-empty";
+      empty.textContent = "No words yet — drag a path and release.";
+      els.foundList.appendChild(empty);
+      return;
+    }
+    for (var i = 0; i < words.length; i++) {
+      var li = document.createElement("li");
+      li.className = "ss-found-item";
+      var w = document.createElement("span");
+      w.className = "ss-found-word";
+      w.textContent = words[i];
+      var pts = document.createElement("span");
+      pts.className = "ss-found-pts";
+      pts.textContent = "+" + utils.wordSum(words[i]);
+      li.appendChild(w);
+      li.appendChild(pts);
+      els.foundList.appendChild(li);
+    }
   }
 
   function cellCenter(index) {
@@ -470,30 +695,43 @@ if (typeof module !== "undefined" && module.exports) {
     var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d.trim());
     path.setAttribute("fill", "none");
-    path.setAttribute("stroke", "rgba(38, 96, 171, 0.85)");
-    path.setAttribute("stroke-width", "6");
+    path.setAttribute("stroke", "rgba(38, 96, 171, 0.9)");
+    path.setAttribute("stroke-width", "7");
     path.setAttribute("stroke-linecap", "round");
     path.setAttribute("stroke-linejoin", "round");
     svg.appendChild(path);
   }
 
   function updateLive() {
-    var p = currentPuzzle();
-    var word = utils.pathToWord(p.grid, state.path);
-    var sum = utils.wordSum(word);
-    els.liveWord.textContent = word || "—";
-    els.liveSum.textContent = word ? String(sum) : "—";
+    var forward = utils.pathToWord(state.puzzle.grid, state.path);
+    var resolved = utils.resolvePathWord(state.puzzle.grid, state.path);
+    var displayWord = forward || "—";
+    var sum = forward ? utils.wordSum(forward) : null;
 
-    if (!word) {
-      els.liveEq.textContent = "Swipe through letters to build a word.";
+    els.liveWord.textContent = displayWord;
+    els.liveSum.textContent = sum == null ? "—" : String(sum);
+
+    if (!forward) {
+      els.liveEq.textContent = "Drag through letters. Slide back to undo.";
       return;
     }
+
     var parts = [];
-    for (var i = 0; i < word.length; i++) {
-      var ch = word.charAt(i);
+    for (var i = 0; i < forward.length; i++) {
+      var ch = forward.charAt(i);
       parts.push(ch + "(" + utils.letterValue(ch) + ")");
     }
-    els.liveEq.textContent = parts.join(" + ") + " = " + sum;
+    var msg = parts.join(" + ") + " = " + sum;
+    if (resolved.word && resolved.reversed) {
+      msg += " → " + resolved.word;
+    } else if (
+      forward.length >= utils.MIN_WORD_LEN &&
+      !resolved.word &&
+      utils.isDictionaryWord(utils.reverseWord(forward)) === false
+    ) {
+      // keep equation only
+    }
+    els.liveEq.textContent = msg;
   }
 
   function highlightPath() {
@@ -520,35 +758,6 @@ if (typeof module !== "undefined" && module.exports) {
     highlightPath();
   }
 
-  function renderTargets() {
-    var p = currentPuzzle();
-    els.targets.innerHTML = "";
-    for (var i = 0; i < p.targets.length; i++) {
-      var t = p.targets[i];
-      var li = document.createElement("li");
-      li.className = "ss-target";
-      var foundWord = state.found[String(i)];
-      if (foundWord) {
-        li.classList.add("is-found");
-      }
-      var sumEl = document.createElement("span");
-      sumEl.className = "ss-target-sum";
-      sumEl.textContent = String(t.sum);
-      var meta = document.createElement("span");
-      meta.className = "ss-target-meta";
-      if (foundWord) {
-        meta.textContent = foundWord;
-      } else if (state.revealed[String(i)]) {
-        meta.textContent = t.hint + " → " + t.answer;
-      } else {
-        meta.textContent = t.hint;
-      }
-      li.appendChild(sumEl);
-      li.appendChild(meta);
-      els.targets.appendChild(li);
-    }
-  }
-
   function syncSvgSize() {
     var rect = els.grid.getBoundingClientRect();
     els.pathSvg.setAttribute("width", String(rect.width));
@@ -558,12 +767,12 @@ if (typeof module !== "undefined" && module.exports) {
   }
 
   function renderGrid() {
-    var p = currentPuzzle();
+    var p = state.puzzle;
     els.grid.style.setProperty("--ss-size", String(p.size));
     els.grid.innerHTML = "";
     els.grid.setAttribute(
       "aria-label",
-      p.title + " letter grid, " + p.size + " by " + p.size
+      "SumSwipe daily grid for " + state.dateKey
     );
 
     for (var i = 0; i < p.grid.length; i++) {
@@ -571,7 +780,10 @@ if (typeof module !== "undefined" && module.exports) {
       btn.type = "button";
       btn.className = "ss-cell";
       btn.dataset.index = String(i);
-      btn.setAttribute("aria-label", "Letter " + p.grid[i] + ", value " + utils.letterValue(p.grid[i]));
+      btn.setAttribute(
+        "aria-label",
+        "Letter " + p.grid[i] + ", value " + utils.letterValue(p.grid[i])
+      );
       btn.tabIndex = -1;
       var letter = document.createElement("span");
       letter.className = "ss-cell-letter";
@@ -587,94 +799,134 @@ if (typeof module !== "undefined" && module.exports) {
     requestAnimationFrame(syncSvgSize);
   }
 
-  function loadPuzzle(index) {
-    state.puzzleIndex = index;
+  function loadDay(dateKey) {
+    var today = utils.todayKey();
+    if (dateKey > today) {
+      dateKey = today;
+    }
+    state.dateKey = dateKey;
+    state.puzzle = utils.generateGrid(dateKey, utils.GRID_SIZE);
+    state.validSet = {};
+    for (var i = 0; i < state.puzzle.words.length; i++) {
+      state.validSet[state.puzzle.words[i]] = true;
+    }
     state.path = [];
     state.dragging = false;
-    restorePuzzleProgress();
+    state.pointerId = null;
+    restoreProgress();
     renderChrome();
     renderGrid();
-    renderTargets();
+    renderFound();
     updateLive();
-    if (isComplete()) {
-      setStatus("Puzzle complete! Swipe for fun, or jump to the next one.", "success");
-    } else {
-      setStatus("Drag across letters. Release to submit.");
-    }
+    var tier = currentTier();
+    var isToday = state.dateKey === utils.todayKey();
+    setStatus(
+      (isToday ? "Today’s grid" : "This day’s grid") +
+        ": " +
+        state.puzzle.wordCount +
+        " possible words · max " +
+        state.puzzle.maxScore +
+        " pts · " +
+        tier.label +
+        "."
+    );
   }
 
   function tryCommitPath() {
-    var p = currentPuzzle();
-    if (!utils.isValidPath(state.path, p.size) || state.path.length < utils.MIN_WORD_LEN) {
-      clearPath();
-      return;
-    }
-    var word = utils.pathToWord(p.grid, state.path);
-    var sum = utils.wordSum(word);
-
-    if (!utils.isDictionaryWord(word)) {
-      setStatus('"' + word + '" isn’t in the word list. Sum would be ' + sum + ".", "error");
+    if (
+      !utils.isValidPath(state.path, state.puzzle.size) ||
+      state.path.length < utils.MIN_WORD_LEN
+    ) {
       clearPath();
       return;
     }
 
-    for (var key in state.found) {
-      if (Object.prototype.hasOwnProperty.call(state.found, key) && state.found[key] === word) {
-        setStatus("Already found " + word + ".", "error");
-        clearPath();
-        return;
-      }
-    }
+    var resolved = utils.resolvePathWord(state.puzzle.grid, state.path);
+    var attempted = utils.pathToWord(state.puzzle.grid, state.path);
 
-    var matchedIndex = -1;
-    for (var i = 0; i < p.targets.length; i++) {
-      if (state.found[String(i)]) {
-        continue;
-      }
-      if (p.targets[i].sum === sum) {
-        matchedIndex = i;
-        break;
-      }
-    }
-
-    if (matchedIndex === -1) {
-      setStatus(word + " = " + sum + " — not a remaining target.", "error");
+    if (!resolved.word) {
+      setStatus('"' + attempted + '" isn’t a word (try the other direction too).', "error");
       clearPath();
       return;
     }
 
-    state.found[String(matchedIndex)] = word;
+    if (!state.validSet[resolved.word]) {
+      setStatus(resolved.word + " isn’t on this grid path set.", "error");
+      clearPath();
+      return;
+    }
+
+    if (state.found.indexOf(resolved.word) !== -1) {
+      setStatus("Already found " + resolved.word + ".", "error");
+      clearPath();
+      return;
+    }
+
+    state.found.push(resolved.word);
+    state.found.sort();
     saveProgress();
     renderChrome();
-    renderTargets();
+    renderFound();
     clearPath();
 
-    if (isComplete()) {
-      setStatus('Nice! "' + word + '" hits ' + sum + ". Puzzle complete.", "success");
+    var pts = utils.wordSum(resolved.word);
+    var tier = currentTier();
+    var note = resolved.reversed ? " (from reverse swipe)" : "";
+    if (currentScore() >= state.puzzle.maxScore) {
+      setStatus(
+        "Perfect! " + resolved.word + " +" + pts + note + " — every word found.",
+        "success"
+      );
       root.classList.add("ss-celebrate");
       setTimeout(function () {
         root.classList.remove("ss-celebrate");
       }, 700);
     } else {
-      setStatus("Got it — " + word + " = " + sum + ".", "success");
+      setStatus(
+        resolved.word + " +" + pts + note + " · " + tier.label + " tier",
+        "success"
+      );
     }
   }
 
+  /** Prefer nearest cell center within a generous radius (helps finger gaps). */
   function indexFromPoint(clientX, clientY) {
-    var el = document.elementFromPoint(clientX, clientY);
-    if (!el) {
+    var gridRect = els.grid.getBoundingClientRect();
+    if (
+      clientX < gridRect.left - 8 ||
+      clientX > gridRect.right + 8 ||
+      clientY < gridRect.top - 8 ||
+      clientY > gridRect.bottom + 8
+    ) {
       return -1;
     }
-    var cell = el.closest ? el.closest(".ss-cell") : null;
-    if (!cell || !els.grid.contains(cell)) {
+
+    var cells = els.grid.querySelectorAll(".ss-cell");
+    if (!cells.length) {
       return -1;
     }
-    return parseInt(cell.dataset.index, 10);
+    var cellRect = cells[0].getBoundingClientRect();
+    var radius = Math.max(cellRect.width, cellRect.height) * 0.62;
+    var best = -1;
+    var bestDist = radius * radius;
+
+    for (var i = 0; i < cells.length; i++) {
+      var r = cells[i].getBoundingClientRect();
+      var cx = r.left + r.width / 2;
+      var cy = r.top + r.height / 2;
+      var dx = clientX - cx;
+      var dy = clientY - cy;
+      var dist = dx * dx + dy * dy;
+      if (dist <= bestDist) {
+        bestDist = dist;
+        best = parseInt(cells[i].dataset.index, 10);
+      }
+    }
+    return best;
   }
 
   function extendPath(index) {
-    var p = currentPuzzle();
-    if (index < 0 || index >= p.grid.length) {
+    if (index < 0 || index >= state.puzzle.grid.length) {
       return;
     }
     if (state.path.length === 0) {
@@ -686,15 +938,14 @@ if (typeof module !== "undefined" && module.exports) {
     if (index === last) {
       return;
     }
-    if (state.path.length >= 2 && index === state.path[state.path.length - 2]) {
-      state.path.pop();
+    // Backtrack one or more steps when revisiting an earlier cell on the path.
+    var existing = state.path.indexOf(index);
+    if (existing !== -1) {
+      state.path = state.path.slice(0, existing + 1);
       highlightPath();
       return;
     }
-    if (state.path.indexOf(index) !== -1) {
-      return;
-    }
-    if (!utils.areAdjacent(last, index, p.size)) {
+    if (!utils.areAdjacent(last, index, state.puzzle.size)) {
       return;
     }
     if (state.path.length >= utils.MAX_WORD_LEN) {
@@ -704,8 +955,20 @@ if (typeof module !== "undefined" && module.exports) {
     highlightPath();
   }
 
+  function endDrag() {
+    if (!state.dragging) {
+      return;
+    }
+    state.dragging = false;
+    state.pointerId = null;
+    tryCommitPath();
+  }
+
   function onPointerDown(e) {
     if (e.button != null && e.button !== 0) {
+      return;
+    }
+    if (state.dragging) {
       return;
     }
     var index = indexFromPoint(e.clientX, e.clientY);
@@ -714,6 +977,7 @@ if (typeof module !== "undefined" && module.exports) {
     }
     e.preventDefault();
     state.dragging = true;
+    state.pointerId = e.pointerId;
     state.path = [];
     if (els.grid.setPointerCapture) {
       try {
@@ -729,6 +993,9 @@ if (typeof module !== "undefined" && module.exports) {
     if (!state.dragging) {
       return;
     }
+    if (state.pointerId != null && e.pointerId !== state.pointerId) {
+      return;
+    }
     e.preventDefault();
     var index = indexFromPoint(e.clientX, e.clientY);
     if (index >= 0) {
@@ -740,15 +1007,27 @@ if (typeof module !== "undefined" && module.exports) {
     if (!state.dragging) {
       return;
     }
-    state.dragging = false;
-    if (els.grid.releasePointerCapture) {
+    if (state.pointerId != null && e.pointerId !== state.pointerId) {
+      return;
+    }
+    if (els.grid.releasePointerCapture && state.pointerId != null) {
       try {
-        els.grid.releasePointerCapture(e.pointerId);
+        els.grid.releasePointerCapture(state.pointerId);
       } catch (err) {
         // ignore
       }
     }
-    tryCommitPath();
+    endDrag();
+  }
+
+  function onWindowPointerUp(e) {
+    if (!state.dragging) {
+      return;
+    }
+    if (state.pointerId != null && e.pointerId !== state.pointerId) {
+      return;
+    }
+    onPointerUp(e);
   }
 
   els.grid.addEventListener("pointerdown", onPointerDown);
@@ -757,10 +1036,11 @@ if (typeof module !== "undefined" && module.exports) {
   els.grid.addEventListener("pointercancel", onPointerUp);
   els.grid.addEventListener("lostpointercapture", function () {
     if (state.dragging) {
-      state.dragging = false;
-      tryCommitPath();
+      endDrag();
     }
   });
+  window.addEventListener("pointerup", onWindowPointerUp);
+  window.addEventListener("pointercancel", onWindowPointerUp);
 
   els.grid.addEventListener(
     "touchmove",
@@ -773,40 +1053,30 @@ if (typeof module !== "undefined" && module.exports) {
   );
 
   els.prev.addEventListener("click", function () {
-    if (state.puzzleIndex > 0) {
-      loadPuzzle(state.puzzleIndex - 1);
-    }
+    loadDay(utils.shiftDateKey(state.dateKey, -1));
   });
   els.next.addEventListener("click", function () {
-    if (state.puzzleIndex < puzzles.length - 1) {
-      loadPuzzle(state.puzzleIndex + 1);
+    var today = utils.todayKey();
+    var next = utils.shiftDateKey(state.dateKey, 1);
+    if (next > today) {
+      next = today;
     }
+    loadDay(next);
+  });
+  els.today.addEventListener("click", function () {
+    loadDay(utils.todayKey());
   });
   els.clear.addEventListener("click", function () {
     clearPath();
     setStatus("Path cleared.");
   });
-  els.hint.addEventListener("click", function () {
-    var p = currentPuzzle();
-    for (var i = 0; i < p.targets.length; i++) {
-      if (!state.found[String(i)]) {
-        state.revealed[String(i)] = true;
-        saveProgress();
-        renderTargets();
-        setStatus('Hint: look for "' + p.targets[i].answer + '" (sum ' + p.targets[i].sum + ").");
-        return;
-      }
-    }
-    setStatus("All targets already found.");
-  });
   els.reset.addEventListener("click", function () {
-    state.found = {};
-    state.revealed = {};
+    state.found = [];
     saveProgress();
     clearPath();
     renderChrome();
-    renderTargets();
-    setStatus("Puzzle progress cleared.");
+    renderFound();
+    setStatus("Day’s finds cleared.");
   });
 
   var resizeTimer = null;
@@ -818,5 +1088,5 @@ if (typeof module !== "undefined" && module.exports) {
     }, 100);
   });
 
-  loadPuzzle(0);
+  loadDay(utils.todayKey());
 })();

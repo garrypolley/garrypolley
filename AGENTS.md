@@ -89,7 +89,7 @@ hugo --gc --minify  # production-like build → public/
 - Front matter: `title`, `slug`, `date`, `short`, `draft`
 - Permalinks: `/tool/:slug/`
 - Keep interactive UI in shortcodes and/or `static/js/` + `static/css/tool.css`
-- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`), SumSwipe (`{{< sumSwipe >}}`)
+- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`), SumSwipe (`{{< sumSwipe >}}` — daily word-sum hunt with score tiers)
 - Tools are navigable via the Tools menu; they are not included in `mainSections` (home feed)
 
 ### Contact

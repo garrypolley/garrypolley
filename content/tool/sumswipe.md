@@ -3,11 +3,11 @@ title: "SumSwipe"
 slug: "sumswipe"
 date: 2026-08-08T11:40:00-05:00
 draft: false
-short: "Swipe letter paths so A=1…Z=26 hits the target sum"
+short: "Daily swipe-word puzzle — score tiers from A=1…Z=26"
 ---
 
-A finger-friendly math word puzzle. Drag across adjacent letters to spell a word — each letter is worth its place in the alphabet (A=1 … Z=26). Release when the running sum matches a target.
+A new letter grid every day. Drag through adjacent letters to find as many words as you want — each letter adds its alphabet value (A=1 … Z=26) to your score. Tiers (Bronze → Perfect) are based on that day’s maximum.
 
-Works with touch, mouse, or a stylus. Progress sticks in your browser.
+Swipe a word forward or backward. Slide back along your path to undo. Browse previous days anytime.
 
 {{< sumSwipe >}}

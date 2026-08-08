@@ -9,6 +9,24 @@
 
   <div class="ss-layout">
     <div class="ss-play">
+      <div class="ss-scoreboard" aria-live="polite">
+        <div class="ss-score-main">
+          <div class="ss-score-pair">
+            <span class="ss-live-label">Score</span>
+            <strong id="ssScoreValue" class="ss-score-value">0</strong>
+            <span class="ss-score-divider">/</span>
+            <span id="ssScoreMax" class="ss-score-max">0</span>
+          </div>
+          <div class="ss-tier-now">
+            <span class="ss-live-label">Tier</span>
+            <strong id="ssTierLabel" class="ss-tier-label" data-tier="starter">Starter</strong>
+          </div>
+        </div>
+        <div class="ss-tier-bar" aria-hidden="true">
+          <div id="ssTierFill" class="ss-tier-fill" data-tier="starter"></div>
+        </div>
+      </div>
+
       <div class="ss-live" aria-live="polite">
         <div class="ss-live-row">
           <span class="ss-live-label">Word</span>
@@ -18,14 +36,14 @@
           <span class="ss-live-label">Sum</span>
           <strong id="ssLiveSum" class="ss-live-sum">—</strong>
         </div>
-        <p id="ssLiveEq" class="ss-live-eq">Swipe through letters to build a word.</p>
+        <p id="ssLiveEq" class="ss-live-eq">Drag through letters. Slide back to undo.</p>
       </div>
 
       <div class="ss-board-wrap">
         <div
           id="ssGrid"
           class="ss-grid"
-          role="grid"
+          role="group"
           aria-label="SumSwipe letter grid"
         ></div>
         <svg id="ssPathSvg" class="ss-path-svg" aria-hidden="true"></svg>
@@ -34,21 +52,31 @@
       <p id="ssStatus" class="tool-status" role="status" aria-live="polite"></p>
 
       <div class="tool-actions ss-actions">
-        <button type="button" id="ssPrev" class="tool-button--secondary">Previous</button>
-        <button type="button" id="ssNext">Next puzzle</button>
+        <button type="button" id="ssPrev" class="tool-button--secondary">Previous day</button>
+        <button type="button" id="ssToday" class="tool-button--secondary">Today</button>
+        <button type="button" id="ssNext">Next day</button>
         <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
-        <button type="button" id="ssHint" class="tool-button--secondary">Hint</button>
-        <button type="button" id="ssResetPuzzle" class="tool-button--secondary">Reset puzzle</button>
+        <button type="button" id="ssResetPuzzle" class="tool-button--secondary">Reset day</button>
       </div>
     </div>
 
     <aside class="ss-sidebar">
-      <h4 class="ss-sidebar-title">Targets</h4>
-      <p class="tool-hint">Find a real word whose letter values add up to each number.</p>
-      <ul id="ssTargets" class="ss-targets"></ul>
+      <h4 class="ss-sidebar-title">Tiers</h4>
+      <p class="tool-hint">Percent of that day’s max points (all valid words’ letter sums).</p>
+      <ul id="ssTierList" class="ss-tier-list"></ul>
+
+      <h4 class="ss-sidebar-title">
+        Found
+        <span id="ssFoundCount" class="ss-found-count">0</span>
+      </h4>
+      <ul id="ssFoundList" class="ss-found-list"></ul>
+
       <div class="ss-legend">
-        <p class="ss-legend-title">Scoring</p>
-        <p class="tool-hint">A=1, B=2, … Z=26. Adjacent includes diagonals. No cell reuse.</p>
+        <p class="ss-legend-title">Rules</p>
+        <p class="tool-hint">
+          A=1…Z=26. Adjacent includes diagonals. No cell reuse on a path.
+          Swipe a word forward or backward. Slide back along the path to undo letters.
+        </p>
       </div>
     </aside>
   </div>
