@@ -27,17 +27,10 @@
         </div>
       </div>
 
-      <div class="ss-live" aria-live="polite">
-        <div class="ss-live-row">
-          <span class="ss-live-label">Word</span>
-          <strong id="ssLiveWord" class="ss-live-word">—</strong>
-        </div>
-        <div class="ss-live-row">
-          <span class="ss-live-label">Sum</span>
-          <strong id="ssLiveSum" class="ss-live-sum">—</strong>
-        </div>
-        <p id="ssLiveEq" class="ss-live-eq">Drag or tap letters · release swipe or tap last letter to play</p>
-      </div>
+      <p id="ssPlayHint" class="ss-play-hint">
+        Drag or tap letters. Release a swipe or tap the last letter to play.
+      </p>
+      <p id="ssLiveEq" class="ss-visually-hidden" aria-live="polite"></p>
 
       <div class="ss-board-wrap">
         <div
@@ -47,7 +40,7 @@
           aria-label="SumSwipe letter grid"
         ></div>
         <svg id="ssPathSvg" class="ss-path-svg" aria-hidden="true"></svg>
-        <div id="ssPathBubble" class="ss-path-bubble" hidden aria-live="polite"></div>
+        <div id="ssPathBubble" class="ss-path-bubble" hidden aria-hidden="true"></div>
       </div>
 
       <p id="ssStatus" class="tool-status" role="status" aria-live="polite"></p>
@@ -57,11 +50,15 @@
         <button type="button" id="ssToday" class="tool-button--secondary">Today</button>
         <button type="button" id="ssNext">Next day</button>
       </div>
-      <div class="tool-actions ss-actions ss-actions-rescue">
-        <button type="button" id="ssSubmit" class="tool-button--secondary">Submit word</button>
-        <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
-        <button type="button" id="ssResetPuzzle" class="tool-button--secondary">Reset day</button>
-      </div>
+
+      <details class="ss-rescue">
+        <summary>Stuck? Rescue controls</summary>
+        <div class="tool-actions ss-actions ss-actions-rescue">
+          <button type="button" id="ssSubmit" class="tool-button--secondary">Submit word</button>
+          <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
+          <button type="button" id="ssResetPuzzle" class="tool-button--secondary">Reset day</button>
+        </div>
+      </details>
     </div>
 
     <aside class="ss-sidebar">
@@ -89,10 +86,10 @@
           (classic Boggle). Sliding back to the previous cell undoes that step.
           Claimed cells stay locked. Longer words score more via length factors
           (4→×1.15, 5→×1.35, 6→×1.6, 7+→×1.9).
-          Drag or tap through open letters. Release a swipe to play a word; tap the
-          last letter again to confirm a tapped word; start a new word elsewhere to
-          auto-submit if the current path is valid. Slide back to undo.
-          Submit / Clear / Reset are only for stuck states.
+          Drag or tap through open letters — a score bubble follows the path head.
+          Release a swipe to play; tap the last letter again to confirm a tapped word;
+          start a new word elsewhere to auto-submit if the current path is valid.
+          Rescue controls (Submit / Clear / Reset) are only for stuck states.
           Keyboard: arrows move, Space adds, Enter submits, Backspace undoes, Esc clears.
         </p>
       </div>

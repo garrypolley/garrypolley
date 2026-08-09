@@ -958,8 +958,7 @@ if (typeof module !== "undefined" && module.exports) {
     grid: document.getElementById("ssGrid"),
     pathSvg: document.getElementById("ssPathSvg"),
     pathBubble: document.getElementById("ssPathBubble"),
-    liveWord: document.getElementById("ssLiveWord"),
-    liveSum: document.getElementById("ssLiveSum"),
+    playHint: document.getElementById("ssPlayHint"),
     liveEq: document.getElementById("ssLiveEq"),
     scoreValue: document.getElementById("ssScoreValue"),
     fillValue: document.getElementById("ssFillValue"),
@@ -1399,46 +1398,52 @@ if (typeof module !== "undefined" && module.exports) {
     }
     if (!stats || !state.path.length) {
       bubble.hidden = true;
+      bubble.classList.remove("is-visible", "is-ready", "is-below");
       return;
     }
     var head = cellCenter(state.path[state.path.length - 1]);
     if (!head) {
       bubble.hidden = true;
+      bubble.classList.remove("is-visible", "is-ready", "is-below");
       return;
     }
+
+    var label = stats.displayWord || stats.forward || "";
+    if (stats.ready) {
+      bubble.textContent = label + " · +" + stats.total;
+    } else if (stats.forward.length < utils.MIN_WORD_LEN) {
+      bubble.textContent = label + " · " + stats.base;
+    } else {
+      bubble.textContent = label + " · " + stats.base + "…";
+    }
+
     bubble.hidden = false;
     bubble.classList.toggle("is-ready", !!stats.ready);
-    if (stats.ready) {
-      bubble.textContent = "+" + stats.total;
-    } else if (stats.forward.length < utils.MIN_WORD_LEN) {
-      bubble.textContent = String(stats.base);
-    } else {
-      bubble.textContent = stats.base + "…";
-    }
-    bubble.style.left = head.x + "px";
+
+    // Measure after text update so edge clamping uses the real width.
+    var wrap = els.grid.parentElement;
+    var wrapW = wrap ? wrap.clientWidth : els.grid.clientWidth;
+    var halfW = Math.max(bubble.offsetWidth, 40) / 2;
+    var x = Math.max(halfW + 4, Math.min(wrapW - halfW - 4, head.x));
+    var placeBelow = head.y < 42;
+    bubble.classList.toggle("is-below", placeBelow);
+    bubble.style.left = x + "px";
     bubble.style.top = head.y + "px";
+    bubble.classList.add("is-visible");
   }
 
   function updateLive() {
     var stats = currentPathLiveStats();
     if (!stats) {
-      els.liveWord.textContent = "—";
-      els.liveSum.textContent = "—";
-      els.liveEq.textContent =
-        "Drag or tap letters · release swipe or tap last letter to play";
+      if (els.playHint) {
+        els.playHint.textContent =
+          "Drag or tap letters. Release a swipe or tap the last letter to play.";
+      }
+      if (els.liveEq) {
+        els.liveEq.textContent = "";
+      }
       updatePathBubble(null);
       return;
-    }
-
-    els.liveWord.textContent = stats.displayWord || "—";
-    if (stats.resolved.word && stats.resolved.reversed && stats.forward) {
-      els.liveWord.textContent = stats.resolved.word + " ← " + stats.forward;
-    }
-
-    if (stats.ready && stats.factor && stats.factor !== 1) {
-      els.liveSum.textContent = stats.base + " ×" + stats.factor + " = " + stats.total;
-    } else {
-      els.liveSum.textContent = String(stats.total);
     }
 
     var parts = [];
@@ -1454,10 +1459,23 @@ if (typeof module !== "undefined" && module.exports) {
       msg += " × " + stats.factor + " = " + stats.total;
     } else if (stats.ready) {
       msg += " → +" + stats.total;
-    } else if (stats.forward.length >= utils.MIN_WORD_LEN) {
-      msg += " · keep going or tap last letter if done";
     }
-    els.liveEq.textContent = msg;
+
+    if (els.liveEq) {
+      els.liveEq.textContent = msg;
+    }
+    if (els.playHint) {
+      if (stats.ready) {
+        els.playHint.textContent =
+          stats.displayWord +
+          " is ready · release swipe or tap the last letter to claim it";
+      } else if (stats.forward.length >= utils.MIN_WORD_LEN) {
+        els.playHint.textContent =
+          "Keep going, or tap the last letter if this word is done";
+      } else {
+        els.playHint.textContent = "Keep adding adjacent letters…";
+      }
+    }
     updatePathBubble(stats);
   }
 
@@ -1700,7 +1718,6 @@ if (typeof module !== "undefined" && module.exports) {
     return best;
   }
 
-  var DOUBLE_TAP_MS = 600;
   var DRAG_MOVE_PX = 18;
 
   function extendPath(index) {
