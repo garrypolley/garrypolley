@@ -924,7 +924,13 @@ if (typeof module !== "undefined" && module.exports) {
   }
 
   var utils = SumSwipeUtils;
-  var storageKey = "sumswipe-daily-v6";
+  /** Stable key; older versioned keys are migrated in. */
+  var storageKey = "sumswipe-progress";
+  var legacyStorageKeys = [
+    "sumswipe-daily-v6",
+    "sumswipe-daily-v5",
+    "sumswipe-daily-v4",
+  ];
 
   var state = {
     dateKey: utils.todayKey(),
@@ -960,6 +966,7 @@ if (typeof module !== "undefined" && module.exports) {
     fillBar: document.getElementById("ssFillBar"),
     foundList: document.getElementById("ssFoundList"),
     foundCount: document.getElementById("ssFoundCount"),
+    historyList: document.getElementById("ssHistoryList"),
     status: document.getElementById("ssStatus"),
     prev: document.getElementById("ssPrev"),
     next: document.getElementById("ssNext"),
@@ -969,27 +976,96 @@ if (typeof module !== "undefined" && module.exports) {
     reset: document.getElementById("ssResetPuzzle"),
   };
 
-  function loadAllProgress() {
+  function readStorageObject(key) {
     try {
-      var raw = localStorage.getItem(storageKey);
+      var raw = localStorage.getItem(key);
       if (!raw) {
-        return {};
+        return null;
       }
       var data = JSON.parse(raw);
-      return data && typeof data === "object" && !Array.isArray(data) ? data : {};
+      return data && typeof data === "object" && !Array.isArray(data) ? data : null;
     } catch (e) {
-      return {};
+      return null;
     }
   }
 
-  function saveProgress() {
+  function dayHasProgress(entry) {
+    return !!(entry && Array.isArray(entry.found) && entry.found.length);
+  }
+
+  /** Prefer the richer / more complete of two day records. */
+  function preferDayRecord(a, b) {
+    if (!dayHasProgress(a)) {
+      return b;
+    }
+    if (!dayHasProgress(b)) {
+      return a;
+    }
+    var aClaimed = typeof a.claimedCount === "number" ? a.claimedCount : a.found.length;
+    var bClaimed = typeof b.claimedCount === "number" ? b.claimedCount : b.found.length;
+    if (bClaimed !== aClaimed) {
+      return bClaimed > aClaimed ? b : a;
+    }
+    var aScore = typeof a.score === "number" ? a.score : 0;
+    var bScore = typeof b.score === "number" ? b.score : 0;
+    if (bScore !== aScore) {
+      return bScore > aScore ? b : a;
+    }
+    var aAt = typeof a.updatedAt === "number" ? a.updatedAt : 0;
+    var bAt = typeof b.updatedAt === "number" ? b.updatedAt : 0;
+    return bAt >= aAt ? b : a;
+  }
+
+  function loadAllProgress() {
+    var merged = {};
+    var keys = legacyStorageKeys.concat([storageKey]);
+    var i;
+    var key;
+    var data;
+    var dateKey;
+    for (i = 0; i < keys.length; i++) {
+      key = keys[i];
+      data = readStorageObject(key);
+      if (!data) {
+        continue;
+      }
+      for (dateKey in data) {
+        if (!Object.prototype.hasOwnProperty.call(data, dateKey)) {
+          continue;
+        }
+        if (!utils.parseDateKey(dateKey)) {
+          continue;
+        }
+        merged[dateKey] = preferDayRecord(merged[dateKey], data[dateKey]);
+      }
+    }
+    return merged;
+  }
+
+  function persistAllProgress(all) {
     try {
-      var all = loadAllProgress();
-      all[state.dateKey] = { found: state.found.slice() };
       localStorage.setItem(storageKey, JSON.stringify(all));
     } catch (e) {
       // ignore quota / private mode
     }
+  }
+
+  function currentDayRecord() {
+    var claimed = claimedCount();
+    var total = cellTotal();
+    return {
+      found: state.found.slice(),
+      claimedCount: claimed,
+      score: currentScore(),
+      completed: claimed >= total && total > 0,
+      updatedAt: Date.now(),
+    };
+  }
+
+  function saveProgress() {
+    var all = loadAllProgress();
+    all[state.dateKey] = currentDayRecord();
+    persistAllProgress(all);
   }
 
   function restoreProgress() {
@@ -1004,6 +1080,101 @@ if (typeof module !== "undefined" && module.exports) {
     );
     state.found = cleaned.found;
     state.claimed = cleaned.claimed;
+    // Refresh summary fields so history stays accurate after dictionary/grid changes.
+    if (state.found.length) {
+      all[state.dateKey] = currentDayRecord();
+      persistAllProgress(all);
+    }
+  }
+
+  function listHistoryDays() {
+    var all = loadAllProgress();
+    var earliest = utils.earliestDateKey();
+    var today = utils.todayKey();
+    var keys = [];
+    var dateKey;
+    for (dateKey in all) {
+      if (!Object.prototype.hasOwnProperty.call(all, dateKey)) {
+        continue;
+      }
+      if (dateKey < earliest || dateKey > today) {
+        continue;
+      }
+      if (!dayHasProgress(all[dateKey])) {
+        continue;
+      }
+      keys.push(dateKey);
+    }
+    keys.sort(function (a, b) {
+      return a < b ? 1 : a > b ? -1 : 0;
+    });
+    return keys.map(function (key) {
+      return { dateKey: key, record: all[key] };
+    });
+  }
+
+  function renderHistory() {
+    if (!els.historyList) {
+      return;
+    }
+    els.historyList.innerHTML = "";
+    var days = listHistoryDays();
+    if (!days.length) {
+      var empty = document.createElement("li");
+      empty.className = "ss-history-empty";
+      empty.textContent = "No saved days yet — progress stays in this browser.";
+      els.historyList.appendChild(empty);
+      return;
+    }
+    for (var i = 0; i < days.length; i++) {
+      var item = days[i];
+      var rec = item.record || {};
+      var li = document.createElement("li");
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ss-history-item";
+      if (item.dateKey === state.dateKey) {
+        btn.classList.add("is-current");
+      }
+      if (rec.completed) {
+        btn.classList.add("is-complete");
+      }
+      btn.dataset.dateKey = item.dateKey;
+
+      var dateEl = document.createElement("span");
+      dateEl.className = "ss-history-date";
+      dateEl.textContent = formatDisplayDate(item.dateKey);
+
+      var stats = document.createElement("span");
+      stats.className = "ss-history-stats";
+      var claimed =
+        typeof rec.claimedCount === "number"
+          ? rec.claimedCount
+          : Array.isArray(rec.found)
+            ? rec.found.length
+            : 0;
+      var score = typeof rec.score === "number" ? rec.score : "—";
+      var total = utils.GRID_SIZE * utils.GRID_SIZE;
+      stats.textContent =
+        claimed +
+        "/" +
+        total +
+        " · " +
+        score +
+        " pts" +
+        (rec.completed ? " · done" : "");
+
+      btn.appendChild(dateEl);
+      btn.appendChild(stats);
+      btn.addEventListener("click", function (ev) {
+        var key = ev.currentTarget.dataset.dateKey;
+        if (key) {
+          loadDay(key);
+        }
+      });
+      li.appendChild(btn);
+      els.historyList.appendChild(li);
+    }
   }
 
   function setStatus(msg, kind) {
@@ -1103,6 +1274,8 @@ if (typeof module !== "undefined" && module.exports) {
     els.prev.disabled = state.dateKey <= earliest;
     els.next.disabled = state.dateKey >= today;
     els.today.disabled = state.dateKey === today;
+
+    renderHistory();
   }
 
   function renderFound() {
