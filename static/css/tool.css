@@ -499,6 +499,44 @@
   z-index: 2;
 }
 
+.ss-path-bubble {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, -120%);
+  min-width: 2.4rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: #1b4a86;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(27, 74, 134, 0.28);
+  white-space: nowrap;
+}
+
+.ss-path-bubble.is-ready {
+  background: var(--ss-ok);
+  box-shadow: 0 4px 12px rgba(31, 107, 58, 0.28);
+}
+
+.ss-path-bubble[hidden] {
+  display: none !important;
+}
+
+.ss-actions-rescue {
+  margin-top: 0.35rem;
+  opacity: 0.85;
+}
+
+.ss-actions-rescue .tool-hint,
+.ss-actions-rescue::before {
+  content: none;
+}
+
 .ss-cell {
   position: relative;
   z-index: 1;

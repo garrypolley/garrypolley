@@ -36,7 +36,7 @@
           <span class="ss-live-label">Sum</span>
           <strong id="ssLiveSum" class="ss-live-sum">—</strong>
         </div>
-        <p id="ssLiveEq" class="ss-live-eq">Drag to swipe · click to extend · release/Submit/double-tap end</p>
+        <p id="ssLiveEq" class="ss-live-eq">Drag or tap letters · release swipe or tap last letter to play</p>
       </div>
 
       <div class="ss-board-wrap">
@@ -47,16 +47,19 @@
           aria-label="SumSwipe letter grid"
         ></div>
         <svg id="ssPathSvg" class="ss-path-svg" aria-hidden="true"></svg>
+        <div id="ssPathBubble" class="ss-path-bubble" hidden aria-live="polite"></div>
       </div>
 
       <p id="ssStatus" class="tool-status" role="status" aria-live="polite"></p>
 
       <div class="tool-actions ss-actions">
-        <button type="button" id="ssSubmit">Submit word</button>
-        <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
         <button type="button" id="ssPrev" class="tool-button--secondary">Previous day</button>
         <button type="button" id="ssToday" class="tool-button--secondary">Today</button>
         <button type="button" id="ssNext">Next day</button>
+      </div>
+      <div class="tool-actions ss-actions ss-actions-rescue">
+        <button type="button" id="ssSubmit" class="tool-button--secondary">Submit word</button>
+        <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
         <button type="button" id="ssResetPuzzle" class="tool-button--secondary">Reset day</button>
       </div>
     </div>
@@ -86,9 +89,10 @@
           (classic Boggle). Sliding back to the previous cell undoes that step.
           Claimed cells stay locked. Longer words score more via length factors
           (4→×1.15, 5→×1.35, 6→×1.6, 7+→×1.9).
-          Click or drag through open letters; tap a non-adjacent tile to restart.
-          Release after a swipe to submit, double-tap the last letter, or press Submit word.
-          Undo with Backspace or Clear.
+          Drag or tap through open letters. Release a swipe to play a word; tap the
+          last letter again to confirm a tapped word; start a new word elsewhere to
+          auto-submit if the current path is valid. Slide back to undo.
+          Submit / Clear / Reset are only for stuck states.
           Keyboard: arrows move, Space adds, Enter submits, Backspace undoes, Esc clears.
         </p>
       </div>

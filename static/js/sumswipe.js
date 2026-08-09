@@ -957,6 +957,7 @@ if (typeof module !== "undefined" && module.exports) {
     progress: document.getElementById("ssProgress"),
     grid: document.getElementById("ssGrid"),
     pathSvg: document.getElementById("ssPathSvg"),
+    pathBubble: document.getElementById("ssPathBubble"),
     liveWord: document.getElementById("ssLiveWord"),
     liveSum: document.getElementById("ssLiveSum"),
     liveEq: document.getElementById("ssLiveEq"),
@@ -1064,7 +1065,11 @@ if (typeof module !== "undefined" && module.exports) {
 
   function saveProgress() {
     var all = loadAllProgress();
-    all[state.dateKey] = currentDayRecord();
+    if (!state.found.length) {
+      delete all[state.dateKey];
+    } else {
+      all[state.dateKey] = currentDayRecord();
+    }
     persistAllProgress(all);
   }
 
@@ -1248,7 +1253,7 @@ if (typeof module !== "undefined" && module.exports) {
     els.blurb.textContent =
       "Daily puzzle for " +
       formatDisplayDate(state.dateKey) +
-      ". Claim all 25 cells with words (A=1…Z=26). Drag to swipe, or click letters and submit.";
+      ". Claim all 25 cells. Drag or tap letters — the path bubble shows your points.";
     els.progress.textContent =
       claimed + "/" + total + " cells · " + score + " pts";
 
@@ -1345,46 +1350,115 @@ if (typeof module !== "undefined" && module.exports) {
     svg.appendChild(path);
   }
 
-  function updateLive() {
-    var forward = utils.pathToWord(state.puzzle.grid, state.path);
+  function pathIsReadyToSubmit() {
+    if (!state.puzzle || state.path.length < utils.MIN_WORD_LEN) {
+      return false;
+    }
+    if (!utils.isValidPath(state.path, state.puzzle.size)) {
+      return false;
+    }
+    if (utils.pathUsesClaimed(state.path, state.claimed)) {
+      return false;
+    }
     var resolved = utils.resolvePathWord(state.puzzle.grid, state.path);
-    var scoredWord = resolved.word || forward;
-    var displayWord = scoredWord || "—";
-    var base = scoredWord ? utils.wordSum(scoredWord) : null;
-    var factor = scoredWord ? utils.lengthFactor(scoredWord.length) : null;
-    var total = scoredWord ? utils.wordPoints(scoredWord) : null;
-
-    els.liveWord.textContent = displayWord;
-    if (resolved.word && resolved.reversed && forward) {
-      els.liveWord.textContent = resolved.word + " ← " + forward;
+    if (!resolved.word || !state.validSet[resolved.word]) {
+      return false;
     }
-    if (total == null) {
-      els.liveSum.textContent = "—";
-    } else if (factor && factor !== 1) {
-      els.liveSum.textContent = base + " ×" + factor + " = " + total;
-    } else {
-      els.liveSum.textContent = String(total);
+    if (hasFoundWord(resolved.word)) {
+      return false;
     }
+    return true;
+  }
 
+  function currentPathLiveStats() {
+    var forward = utils.pathToWord(state.puzzle.grid, state.path);
     if (!forward) {
+      return null;
+    }
+    var resolved = utils.resolvePathWord(state.puzzle.grid, state.path);
+    var base = utils.wordSum(forward);
+    var ready = pathIsReadyToSubmit();
+    var displayWord = ready ? resolved.word : forward;
+    var total = ready && resolved.word ? utils.wordPoints(resolved.word) : base;
+    var factor = ready && resolved.word ? utils.lengthFactor(resolved.word.length) : null;
+    return {
+      forward: forward,
+      resolved: resolved,
+      displayWord: displayWord,
+      base: base,
+      total: total,
+      factor: factor,
+      ready: ready,
+    };
+  }
+
+  function updatePathBubble(stats) {
+    var bubble = els.pathBubble;
+    if (!bubble) {
+      return;
+    }
+    if (!stats || !state.path.length) {
+      bubble.hidden = true;
+      return;
+    }
+    var head = cellCenter(state.path[state.path.length - 1]);
+    if (!head) {
+      bubble.hidden = true;
+      return;
+    }
+    bubble.hidden = false;
+    bubble.classList.toggle("is-ready", !!stats.ready);
+    if (stats.ready) {
+      bubble.textContent = "+" + stats.total;
+    } else if (stats.forward.length < utils.MIN_WORD_LEN) {
+      bubble.textContent = String(stats.base);
+    } else {
+      bubble.textContent = stats.base + "…";
+    }
+    bubble.style.left = head.x + "px";
+    bubble.style.top = head.y + "px";
+  }
+
+  function updateLive() {
+    var stats = currentPathLiveStats();
+    if (!stats) {
+      els.liveWord.textContent = "—";
+      els.liveSum.textContent = "—";
       els.liveEq.textContent =
-        "Drag to swipe · click to extend · release/Submit/double-tap end";
+        "Drag or tap letters · release swipe or tap last letter to play";
+      updatePathBubble(null);
       return;
     }
 
+    els.liveWord.textContent = stats.displayWord || "—";
+    if (stats.resolved.word && stats.resolved.reversed && stats.forward) {
+      els.liveWord.textContent = stats.resolved.word + " ← " + stats.forward;
+    }
+
+    if (stats.ready && stats.factor && stats.factor !== 1) {
+      els.liveSum.textContent = stats.base + " ×" + stats.factor + " = " + stats.total;
+    } else {
+      els.liveSum.textContent = String(stats.total);
+    }
+
     var parts = [];
-    for (var i = 0; i < forward.length; i++) {
-      var ch = forward.charAt(i);
+    for (var i = 0; i < stats.forward.length; i++) {
+      var ch = stats.forward.charAt(i);
       parts.push(ch + "(" + utils.letterValue(ch) + ")");
     }
-    var msg = parts.join(" + ") + " = " + utils.wordSum(forward);
-    if (resolved.word && resolved.reversed) {
-      msg += " → " + resolved.word;
+    var msg = parts.join(" + ") + " = " + stats.base;
+    if (stats.resolved.word && stats.resolved.reversed) {
+      msg += " → " + stats.resolved.word;
     }
-    if (factor && factor !== 1) {
-      msg += " × " + factor + " = " + total;
+    if (stats.ready && stats.factor && stats.factor !== 1) {
+      msg += " × " + stats.factor + " = " + stats.total;
+    } else if (stats.ready) {
+      msg += " → +" + stats.total;
+    } else if (stats.forward.length >= utils.MIN_WORD_LEN) {
+      msg += " · keep going or tap last letter if done";
     }
     els.liveEq.textContent = msg;
+    updatePathBubble(stats);
   }
 
   function highlightPath() {
@@ -1674,12 +1748,25 @@ if (typeof module !== "undefined" && module.exports) {
 
   function applyTapToPath(index) {
     var action = utils.pathTapAction(state.path, index, state.puzzle.size);
+
+    // Tap the current end again to play the word (no helper button needed).
+    if (action === "noop" && pathIsReadyToSubmit()) {
+      tryCommitPath();
+      return;
+    }
+
+    // Starting a new selection elsewhere auto-submits a ready word first.
     if (action === "restart") {
-      state.path = [];
+      if (pathIsReadyToSubmit()) {
+        tryCommitPath();
+      } else if (state.path.length) {
+        clearPath();
+      }
       clearTapMemory();
       extendPath(index);
       return;
     }
+
     if (action === "noop") {
       state.focusIndex = index;
       highlightPath();
@@ -1707,28 +1794,9 @@ if (typeof module !== "undefined" && module.exports) {
     return state.path.length >= utils.MIN_WORD_LEN;
   }
 
-  function recordEndTap(index) {
-    state.lastTapTime = Date.now();
-    state.lastTapIndex = index;
-  }
-
   function clearTapMemory() {
     state.lastTapTime = 0;
     state.lastTapIndex = -1;
-  }
-
-  /** True when this pointer-down should submit via double-tap on the path end. */
-  function shouldDoubleTapSubmit(index) {
-    if (!canSubmitPath() || index !== pathEndIndex()) {
-      return false;
-    }
-    return utils.isDoubleTap(
-      Date.now(),
-      state.lastTapTime,
-      state.lastTapIndex,
-      index,
-      DOUBLE_TAP_MS
-    );
   }
 
   function onPointerDown(e) {
@@ -1744,13 +1812,6 @@ if (typeof module !== "undefined" && module.exports) {
     }
     e.preventDefault();
 
-    // Double-tap the current end letter to submit (checked before path changes).
-    if (shouldDoubleTapSubmit(index)) {
-      clearTapMemory();
-      tryCommitPath();
-      return;
-    }
-
     state.dragging = true;
     state.pointerId = e.pointerId;
     state.dragMoved = false;
@@ -1765,10 +1826,13 @@ if (typeof module !== "undefined" && module.exports) {
         // ignore
       }
     }
-    var before = state.path.join(",");
+    var beforeLen = state.path.length;
+    var beforeJoin = state.path.join(",");
     applyTapToPath(index);
-    if (state.path.join(",") !== before) {
-      state.gestureChangedPath = true;
+    if (state.path.join(",") !== beforeJoin || state.path.length !== beforeLen) {
+      if (state.path.length) {
+        state.gestureChangedPath = true;
+      }
     }
   }
 
@@ -1802,7 +1866,6 @@ if (typeof module !== "undefined" && module.exports) {
     if (state.pointerId != null && e.pointerId !== state.pointerId) {
       return;
     }
-    var index = indexFromPoint(e.clientX, e.clientY);
     var dragMoved = state.dragMoved;
     var gestureChangedPath = state.gestureChangedPath;
     if (els.grid.releasePointerCapture && state.pointerId != null) {
@@ -1814,20 +1877,11 @@ if (typeof module !== "undefined" && module.exports) {
     }
     endDrag();
 
-    // Swipe: release after dragging through letters submits.
-    if (dragMoved && gestureChangedPath && canSubmitPath()) {
+    // Swipe release plays the word when valid; otherwise keep the path.
+    if (dragMoved && gestureChangedPath && canSubmitPath() && pathIsReadyToSubmit()) {
       clearTapMemory();
       tryCommitPath();
-      return;
     }
-
-    // Click-built path: remember end taps so a second tap submits.
-    if (canSubmitPath() && index === pathEndIndex()) {
-      recordEndTap(index);
-      return;
-    }
-
-    clearTapMemory();
   }
 
   function onWindowPointerUp(e) {
