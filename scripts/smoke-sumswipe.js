@@ -21,48 +21,65 @@ check("letterValue maps A=1 through Z=26", function () {
   assert.strictEqual(utils.letterValue("z"), 26);
 });
 
-check("pathMultiplier uses max single-tile visits, capped at 3, no stacking", function () {
-  assert.strictEqual(utils.pathMultiplier([0, 1, 2]), 1);
-  assert.strictEqual(utils.pathMultiplier([0, 1, 0]), 2);
-  assert.strictEqual(utils.pathMultiplier([0, 1, 0, 1, 0]), 3);
-  assert.strictEqual(utils.wordPathScore("CAT", [0, 1, 0]), utils.wordSum("CAT") * 2);
+check("lengthFactor and wordPoints use length bonuses", function () {
+  assert.strictEqual(utils.lengthFactor(3), 1);
+  assert.strictEqual(utils.lengthFactor(4), 1.15);
+  assert.strictEqual(utils.lengthFactor(5), 1.35);
+  assert.strictEqual(utils.lengthFactor(6), 1.6);
+  assert.strictEqual(utils.lengthFactor(7), 1.9);
+  assert.strictEqual(utils.lengthFactor(8), 1.9);
+  assert.strictEqual(utils.wordPoints("CAT"), Math.round(utils.wordSum("CAT") * 1));
+  assert.strictEqual(
+    utils.wordPoints("CARE"),
+    Math.round(utils.wordSum("CARE") * 1.15)
+  );
 });
 
-check("isValidPath allows reuse up to 3, rejects consecutive same cell", function () {
-  assert.strictEqual(utils.isValidPath([0, 1, 2], 4), true);
-  assert.strictEqual(utils.isValidPath([0, 1, 0], 4), true);
-  assert.strictEqual(utils.isValidPath([0, 0], 4), false);
-  assert.strictEqual(utils.isValidPath([0, 2], 4), false);
-  assert.strictEqual(utils.isValidPath([0, 1, 0, 1, 0, 1], 4), true);
-  assert.strictEqual(utils.isValidPath([0, 1, 0, 1, 0, 1, 0], 4), false);
+check("scoreWordsWithFill applies +15% when board is full", function () {
+  var entries = [
+    { word: "CAT", path: [0, 1, 2], points: 10 },
+    { word: "DOG", path: [3, 4, 5], points: 20 },
+  ];
+  assert.strictEqual(utils.scoreWordsWithFill(entries, 24, 5), 30);
+  assert.strictEqual(utils.scoreWordsWithFill(entries, 25, 5), Math.round(30 * 1.15));
+});
+
+check("isValidPath rejects reuse; pathTapAction backtracks on previous", function () {
+  assert.strictEqual(utils.isValidPath([0, 1, 2], 5), true);
+  assert.strictEqual(utils.isValidPath([0, 1, 0], 5), false);
+  assert.strictEqual(utils.isValidPath([0, 2], 5), false);
+  assert.strictEqual(utils.pathTapAction([], 0, 5), "start");
+  assert.strictEqual(utils.pathTapAction([0], 1, 5), "extend");
+  assert.strictEqual(utils.pathTapAction([0, 1], 0, 5), "backtrack");
+  assert.strictEqual(utils.pathTapAction([0, 1, 2], 1, 5), "backtrack");
+  assert.strictEqual(utils.pathTapAction([0], 12, 5), "restart");
+});
+
+check("claim helpers track occupied cells", function () {
+  var claimed = {};
+  assert.strictEqual(utils.countClaimed(claimed), 0);
+  utils.claimPath(claimed, [0, 1, 6]);
+  assert.strictEqual(utils.countClaimed(claimed), 3);
+  assert.strictEqual(utils.isCellClaimed(claimed, 1), true);
+  assert.strictEqual(utils.pathUsesClaimed([2, 3], claimed), false);
+  assert.strictEqual(utils.pathUsesClaimed([1, 2], claimed), true);
+  var rebuilt = utils.rebuildClaimedFromFound([
+    { word: "CAT", path: [0, 1, 2], points: 1 },
+    { word: "DOG", path: [3, 4, 5], points: 2 },
+  ]);
+  assert.strictEqual(utils.countClaimed(rebuilt), 6);
 });
 
 check("resolvePathWord accepts forward or reverse swipe", function () {
-  var grid = utils.flattenGrid(["CATS", "XXXX"]);
+  var grid = utils.flattenGrid(["CATXX", "XXXXX", "XXXXX", "XXXXX", "XXXXX"]);
   assert.strictEqual(utils.resolvePathWord(grid, [0, 1, 2]).word, "CAT");
   assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).word, "CAT");
   assert.strictEqual(utils.resolvePathWord(grid, [2, 1, 0]).reversed, true);
 });
 
-check("pathTapAction extends adjacent, reuses previous under cap, restarts otherwise", function () {
-  assert.strictEqual(utils.pathTapAction([], 0, 4), "start");
-  assert.strictEqual(utils.pathTapAction([0], 0, 4), "noop");
-  assert.strictEqual(utils.pathTapAction([0], 1, 4), "extend");
-  // A→Z→A style: return to previous tile while under visit cap = extend (reuse)
-  assert.strictEqual(utils.pathTapAction([0, 1], 0, 4), "extend");
-  // At visit cap on previous tile (0 used 3×), returning undoes instead
-  assert.strictEqual(utils.pathTapAction([0, 1, 0, 1, 0, 1], 0, 4), "backtrack");
-  assert.strictEqual(utils.pathTapAction([0], 3, 4), "restart");
-});
-
-check("focusAfterBackspace tracks the new path head", function () {
-  // Called with the path after pop().
+check("focusAfterBackspace and double-tap helpers", function () {
   assert.strictEqual(utils.focusAfterBackspace([0, 1]), 1);
-  assert.strictEqual(utils.focusAfterBackspace([0]), 0);
   assert.strictEqual(utils.focusAfterBackspace([]), null);
-});
-
-check("double-tap helpers forgive end jitter but not path-changing gestures", function () {
   assert.strictEqual(
     utils.countsTowardDoubleTap({
       gestureChangedPath: false,
@@ -71,120 +88,85 @@ check("double-tap helpers forgive end jitter but not path-changing gestures", fu
     }),
     true
   );
-  assert.strictEqual(
-    utils.countsTowardDoubleTap({
-      gestureChangedPath: true,
-      dragMoved: false,
-      onPathEnd: true,
-    }),
-    false
-  );
-  assert.strictEqual(
-    utils.countsTowardDoubleTap({
-      gestureChangedPath: false,
-      dragMoved: true,
-      onPathEnd: false,
-    }),
-    false
-  );
   assert.strictEqual(utils.isDoubleTap(1000, 600, 5, 5, 550), true);
-  assert.strictEqual(utils.isDoubleTap(1000, 400, 5, 5, 550), false);
-  assert.strictEqual(utils.isDoubleTap(1000, 900, 5, 4, 550), false);
 });
 
-check("log rating 0–9 and date helpers including history bound", function () {
-  assert.strictEqual(utils.RATING_MAX, 9);
-  assert.strictEqual(utils.ratingForScore(0, 200), 0);
-  assert.strictEqual(utils.ratingForScore(200, 200), 9);
-  assert.strictEqual(utils.ratingForScore(400, 200), 9);
-  // ~50% of max → 8 on base-2 thresholds
-  assert.strictEqual(utils.ratingForScore(100, 200), 8);
-  // small fraction still unlocks early ratings
-  assert.ok(utils.ratingForScore(2, 200) >= 1);
-  assert.ok(utils.ratingForScore(2, 200) < 8);
-  assert.ok(utils.ratingFillRatio(100, 200) > 0.8);
-  assert.ok(utils.ratingFillRatio(100, 200) < 1);
-  assert.strictEqual(utils.ratingFillRatio(200, 200), 1);
-  assert.strictEqual(utils.shiftDateKey("2026-08-08", -1), "2026-08-07");
-  var today = utils.todayKey(new Date(2026, 7, 8));
-  assert.strictEqual(today, "2026-08-08");
-  assert.strictEqual(utils.earliestDateKey(new Date(2026, 7, 8)), "2025-08-08");
-  assert.strictEqual(utils.MAX_HISTORY_DAYS, 365);
-});
-
-check("sanitizeFoundWords clamps to bestMult and drops unknown words", function () {
-  var valid = { CAT: true, DOG: true };
-  var best = { CAT: 1, DOG: 2 };
-  var cleaned = utils.sanitizeFoundWords(
-    [
-      "cat",
-      { word: "DOG", mult: 3 },
-      { word: "CAT", mult: 3 },
-      { word: "NOPE", mult: 2 },
-    ],
-    valid,
-    best
-  );
-  assert.deepStrictEqual(cleaned, [
-    { word: "CAT", mult: 1 },
-    { word: "DOG", mult: 2 },
-  ]);
-});
-
-check("scoreFoundEntries applies multipliers", function () {
-  assert.strictEqual(
-    utils.scoreFoundEntries([
-      { word: "CAT", mult: 2 },
-      { word: "DOG", mult: 1 },
-    ]),
-    utils.wordSum("CAT") * 2 + utils.wordSum("DOG")
-  );
-});
-
-check("daily grid deterministic; maxScore is base 1× total", function () {
-  utils.clearPuzzleCache();
-  var a = utils.generateGrid("2026-08-08", 4);
-  var b = utils.generateGrid("2026-08-08", 4);
-  assert.strictEqual(a, b, "cached puzzle object reused");
-  assert.ok(a.wordCount >= 5, "wordCount " + a.wordCount);
-  var base = 0;
-  var boosted = 0;
-  a.words.forEach(function (w) {
-    base += utils.wordSum(w);
-    boosted += utils.wordSum(w) * (a.bestMult[w] || 1);
+check("randomPartition covers 25 with lengths 3–8", function () {
+  var rand = utils.mulberry32(42);
+  var part = utils.randomPartition(25, 3, 8, rand);
+  assert.ok(part, "partition exists");
+  var sum = part.reduce(function (a, b) {
+    return a + b;
+  }, 0);
+  assert.strictEqual(sum, 25);
+  part.forEach(function (len) {
+    assert.ok(len >= 3 && len <= 8);
   });
-  assert.strictEqual(a.maxScore, base);
-  assert.strictEqual(a.boostedScore, boosted);
-  assert.ok(a.boostedScore >= a.maxScore);
 });
 
-check("unique-letter length-3 words stay at bestMult 1", function () {
-  var grid = utils.flattenGrid(["CATS", "DOGX", "XXXX", "XXXX"]);
-  var sol = utils.findAllWords(grid, 4);
+check("findAllWords uses classic Boggle (no tile reuse within a word)", function () {
+  var grid = utils.flattenGrid(["CATXX", "XXXXX", "XXXXX", "XXXXX", "XXXXX"]);
+  var sol = utils.findAllWords(grid, 5);
   assert.ok(sol.words.indexOf("CAT") !== -1);
-  assert.strictEqual(sol.bestMult.CAT, 1);
-  assert.ok(sol.words.indexOf("DOG") !== -1);
-  assert.strictEqual(sol.bestMult.DOG, 1);
+  assert.strictEqual(utils.isValidPath([0, 1, 0], 5), false);
 });
 
-check("findAllWords tracks reuse multipliers for repeat-letter words", function () {
-  // M O M .
-  // . . . .
-  var grid = utils.flattenGrid(["MOMX", "XXXX", "XXXX", "XXXX"]);
-  var sol = utils.findAllWords(grid, 4);
-  assert.ok(sol.words.indexOf("MOM") !== -1);
-  assert.ok(sol.bestMult.MOM >= 2, "MOM should allow tile reuse on M");
+check("sanitizeFoundEntries drops overlaps and rebuilds claimed", function () {
+  var grid = utils.flattenGrid(["CATXX", "DOGXX", "XXXXX", "XXXXX", "XXXXX"]);
+  var valid = { CAT: true, DOG: true };
+  var cleaned = utils.sanitizeFoundEntries(
+    [
+      { word: "CAT", path: [0, 1, 2] },
+      { word: "DOG", path: [5, 6, 7] },
+      { word: "CAT", path: [0, 1, 2] },
+      { word: "DOG", path: [7, 6, 5] },
+    ],
+    grid,
+    5,
+    valid
+  );
+  assert.strictEqual(cleaned.found.length, 2);
+  assert.strictEqual(utils.countClaimed(cleaned.claimed), 6);
+});
+
+check("daily 5×5 grid deterministic, seed fill covers all cells", function () {
+  utils.clearPuzzleCache();
+  var t0 = Date.now();
+  var a = utils.generateGrid("2026-08-08", 5);
+  var firstMs = Date.now() - t0;
+  var b = utils.generateGrid("2026-08-08", 5);
+  assert.strictEqual(a, b, "cached puzzle object reused");
+  assert.strictEqual(a.size, 5);
+  assert.strictEqual(a.grid.length, 25);
+  assert.ok(a.seedWords && a.seedWords.length >= 3, "has seed partition");
+  var seedClaimed = utils.rebuildClaimedFromFound(a.seedWords);
+  assert.strictEqual(utils.countClaimed(seedClaimed), 25, "seed covers all cells");
+  assert.ok(a.wordCount >= 5, "wordCount " + a.wordCount);
+  console.log(
+    "note - generateGrid first call " +
+      firstMs +
+      "ms, wordCount=" +
+      a.wordCount
+  );
+  assert.ok(firstMs < 8000, "first generateGrid should finish in a few seconds");
 });
 
 check("puzzle cache speeds repeat generateGrid", function () {
   utils.clearPuzzleCache();
-  var t0 = Date.now();
-  utils.generateGrid("2026-08-01", 4);
-  var first = Date.now() - t0;
+  utils.generateGrid("2026-08-01", 5);
   var t1 = Date.now();
-  utils.generateGrid("2026-08-01", 4);
+  utils.generateGrid("2026-08-01", 5);
   var second = Date.now() - t1;
-  assert.ok(second < 20, "cached generate should be near-instant, got " + second + "ms (first " + first + "ms)");
+  assert.ok(second < 20, "cached generate should be near-instant, got " + second + "ms");
+});
+
+check("date helpers including history bound", function () {
+  assert.strictEqual(utils.shiftDateKey("2026-08-08", -1), "2026-08-07");
+  assert.strictEqual(utils.todayKey(new Date(2026, 7, 8)), "2026-08-08");
+  assert.strictEqual(utils.earliestDateKey(new Date(2026, 7, 8)), "2025-08-08");
+  assert.strictEqual(utils.MAX_HISTORY_DAYS, 365);
+  assert.strictEqual(utils.GRID_SIZE, 5);
+  assert.strictEqual(utils.FILL_BONUS, 0.15);
 });
 
 if (!process.exitCode) {

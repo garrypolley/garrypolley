@@ -1,6 +1,6 @@
 /**
- * SumSwipe — daily letter-grid word hunt.
- * Swipe paths to find words (A=1…Z=26). Progress is a 0–9 log rating vs the day.
+ * SumSwipe — daily 5×5 fill-the-board word puzzle.
+ * Swipe paths to claim cells with dictionary words (A=1…Z=26). Goal: all 25 cells.
  * Pure helpers exported for smoke tests.
  */
 var SumSwipeUtils = (function () {
@@ -8,22 +8,17 @@ var SumSwipeUtils = (function () {
 
   var MIN_WORD_LEN = 3;
   var MAX_WORD_LEN = 8;
-  var GRID_SIZE = 4;
-  /** Max times one tile may appear on a path; also caps the word multiplier. */
-  var MAX_TILE_REUSE = 3;
+  var GRID_SIZE = 5;
+  /** Bonus multiplier when all cells are claimed. */
+  var FILL_BONUS = 0.15;
   /** How far back day navigation may go from today. */
   var MAX_HISTORY_DAYS = 365;
-  /** Display rating ceiling (shown as x/9). */
-  var RATING_MAX = 9;
-  /** Base for log thresholds; 9/9 only at the day’s full 1× point total. */
-  var RATING_BASE = 2;
+  /** Target extra words on generated grids (best-effort). */
+  var TARGET_WORD_COUNT = 15;
+  /** Generator retry budget per day. */
+  var GENERATOR_ATTEMPTS = 80;
 
   var puzzleCache = {};
-
-  // English-ish bag for playable daily grids (vowels weighted up).
-  var LETTER_BAG =
-    "EEEEEEEEEEEEAAAAAAAAAIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTT" +
-    "LLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ";
 
   function letterValue(ch) {
     if (typeof ch !== "string" || ch.length === 0) {
@@ -43,6 +38,58 @@ var SumSwipeUtils = (function () {
     var total = 0;
     for (var i = 0; i < word.length; i++) {
       total += letterValue(word.charAt(i));
+    }
+    return total;
+  }
+
+  /** Length factor: 3→1, 4→1.15, 5→1.35, 6→1.6, 7+→1.9 */
+  function lengthFactor(len) {
+    var n = parseInt(len, 10);
+    if (!n || n < MIN_WORD_LEN) {
+      return 0;
+    }
+    if (n === 3) {
+      return 1;
+    }
+    if (n === 4) {
+      return 1.15;
+    }
+    if (n === 5) {
+      return 1.35;
+    }
+    if (n === 6) {
+      return 1.6;
+    }
+    return 1.9;
+  }
+
+  function wordPoints(word) {
+    var w = normalizeWord(word);
+    if (!w) {
+      return 0;
+    }
+    return Math.round(wordSum(w) * lengthFactor(w.length));
+  }
+
+  function scoreWordsWithFill(entries, claimedCount, size) {
+    var total = 0;
+    if (!Array.isArray(entries)) {
+      return 0;
+    }
+    for (var i = 0; i < entries.length; i++) {
+      var entry = entries[i];
+      if (!entry) {
+        continue;
+      }
+      if (typeof entry.points === "number") {
+        total += entry.points;
+      } else if (entry.word) {
+        total += wordPoints(entry.word);
+      }
+    }
+    var cells = (size || GRID_SIZE) * (size || GRID_SIZE);
+    if (claimedCount >= cells) {
+      total = Math.round(total * (1 + FILL_BONUS));
     }
     return total;
   }
@@ -80,9 +127,8 @@ var SumSwipeUtils = (function () {
   /**
    * How a tap/click on `index` should affect an existing path.
    * start | extend | backtrack | noop | restart
-   * Returning to the immediate previous tile prefers reuse (extend) when
-   * under the visit cap — needed for words like GAZA (A→Z→A). At the cap,
-   * that gesture undoes instead. Non-adjacent taps start a new path.
+   * Sliding back to the previous tile undoes (backtrack), not reuse.
+   * Non-adjacent taps start a new path.
    */
   function pathTapAction(path, index, size) {
     if (!Array.isArray(path) || path.length === 0) {
@@ -93,11 +139,10 @@ var SumSwipeUtils = (function () {
       return "noop";
     }
     if (path.length >= 2 && index === path[path.length - 2]) {
-      var visits = countTileVisits(path);
-      if ((visits[index] || 0) < MAX_TILE_REUSE) {
-        return "extend";
-      }
       return "backtrack";
+    }
+    if (path.indexOf(index) !== -1) {
+      return "noop";
     }
     if (areAdjacent(last, index, size)) {
       return "extend";
@@ -143,55 +188,20 @@ var SumSwipeUtils = (function () {
     return now - lastTime <= windowMs && index === lastIndex;
   }
 
-  function countTileVisits(indices) {
-    var counts = {};
-    if (!Array.isArray(indices)) {
-      return counts;
-    }
-    for (var i = 0; i < indices.length; i++) {
-      var idx = indices[i];
-      counts[idx] = (counts[idx] || 0) + 1;
-    }
-    return counts;
-  }
-
-  /**
-   * Multiplier from the single most-reused tile on the path.
-   * 1× default, 2× if one tile appears twice, 3× if thrice. Cap 3.
-   * Does not stack across different tiles (uses the max, not a product).
-   */
-  function pathMultiplier(indices) {
-    var counts = countTileVisits(indices);
-    var maxCount = 1;
-    for (var key in counts) {
-      if (Object.prototype.hasOwnProperty.call(counts, key) && counts[key] > maxCount) {
-        maxCount = counts[key];
-      }
-    }
-    if (maxCount < 1) {
-      return 1;
-    }
-    return Math.min(MAX_TILE_REUSE, maxCount);
-  }
-
-  function wordPathScore(word, indices) {
-    return wordSum(word) * pathMultiplier(indices);
-  }
-
   function isValidPath(indices, size) {
     if (!Array.isArray(indices) || indices.length === 0) {
       return false;
     }
-    var counts = {};
+    var seen = {};
     for (var i = 0; i < indices.length; i++) {
       var idx = indices[i];
       if (typeof idx !== "number" || idx !== idx || idx < 0 || idx >= size * size) {
         return false;
       }
-      counts[idx] = (counts[idx] || 0) + 1;
-      if (counts[idx] > MAX_TILE_REUSE) {
+      if (seen[idx]) {
         return false;
       }
+      seen[idx] = true;
       if (i > 0) {
         if (indices[i - 1] === idx) {
           return false;
@@ -202,6 +212,59 @@ var SumSwipeUtils = (function () {
       }
     }
     return true;
+  }
+
+  function isCellClaimed(claimed, index) {
+    return !!(claimed && claimed[index]);
+  }
+
+  function countClaimed(claimed) {
+    var n = 0;
+    if (!claimed) {
+      return 0;
+    }
+    for (var key in claimed) {
+      if (Object.prototype.hasOwnProperty.call(claimed, key) && claimed[key]) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  function claimPath(claimed, path) {
+    if (!claimed || !Array.isArray(path)) {
+      return claimed || {};
+    }
+    for (var i = 0; i < path.length; i++) {
+      claimed[path[i]] = true;
+    }
+    return claimed;
+  }
+
+  function pathUsesClaimed(path, claimed) {
+    if (!Array.isArray(path) || !claimed) {
+      return false;
+    }
+    for (var i = 0; i < path.length; i++) {
+      if (isCellClaimed(claimed, path[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function rebuildClaimedFromFound(found) {
+    var claimed = {};
+    if (!Array.isArray(found)) {
+      return claimed;
+    }
+    for (var i = 0; i < found.length; i++) {
+      var path = found[i] && found[i].path;
+      if (Array.isArray(path)) {
+        claimPath(claimed, path);
+      }
+    }
+    return claimed;
   }
 
   function pathToWord(grid, indices) {
@@ -381,14 +444,212 @@ var SumSwipeUtils = (function () {
     return formatDateKey(now || new Date());
   }
 
-  function countVowels(grid) {
-    var n = 0;
-    for (var i = 0; i < grid.length; i++) {
-      if ("AEIOU".indexOf(grid[i]) !== -1) {
-        n++;
+  var WORDS_BY_LENGTH = (function () {
+    var byLen = {};
+    for (var i = 0; i < BASE_WORDS.length; i++) {
+      var w = BASE_WORDS[i];
+      var len = w.length;
+      if (!byLen[len]) {
+        byLen[len] = [];
+      }
+      byLen[len].push(w);
+    }
+    return byLen;
+  })();
+
+  function shuffleInPlace(arr, rand) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(rand() * (i + 1));
+      var tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function canPartition(remaining, minLen, maxLen, memo) {
+    if (remaining === 0) {
+      return true;
+    }
+    if (remaining < minLen) {
+      return false;
+    }
+    if (memo[remaining] !== undefined) {
+      return memo[remaining];
+    }
+    for (var L = minLen; L <= maxLen && L <= remaining; L++) {
+      if (canPartition(remaining - L, minLen, maxLen, memo)) {
+        memo[remaining] = true;
+        return true;
       }
     }
-    return n;
+    memo[remaining] = false;
+    return false;
+  }
+
+  function randomPartition(total, minLen, maxLen, rand) {
+    var result = [];
+    var memo = {};
+    function tryPart(remaining) {
+      if (remaining === 0) {
+        return true;
+      }
+      if (remaining < minLen) {
+        return false;
+      }
+      var options = [];
+      for (var L = minLen; L <= maxLen && L <= remaining; L++) {
+        if (canPartition(remaining - L, minLen, maxLen, memo)) {
+          options.push(L);
+        }
+      }
+      if (!options.length) {
+        return false;
+      }
+      shuffleInPlace(options, rand);
+      for (var i = 0; i < options.length; i++) {
+        var len = options[i];
+        if (tryPart(remaining - len)) {
+          result.push(len);
+          return true;
+        }
+      }
+      return false;
+    }
+    if (!tryPart(total)) {
+      return null;
+    }
+    return result;
+  }
+
+  function findPathOfLength(start, size, blocked, len, rand) {
+    var path = [start];
+    var inPath = {};
+    inPath[start] = true;
+    var found = null;
+
+    function dfs(idx) {
+      if (found) {
+        return;
+      }
+      if (path.length === len) {
+        found = path.slice();
+        return;
+      }
+      var neighbors = [];
+      var cells = size * size;
+      for (var j = 0; j < cells; j++) {
+        if (!blocked[j] && !inPath[j] && areAdjacent(idx, j, size)) {
+          neighbors.push(j);
+        }
+      }
+      shuffleInPlace(neighbors, rand);
+      for (var k = 0; k < neighbors.length; k++) {
+        var next = neighbors[k];
+        path.push(next);
+        inPath[next] = true;
+        dfs(next);
+        if (found) {
+          return;
+        }
+        path.pop();
+        delete inPath[next];
+      }
+    }
+
+    dfs(start);
+    return found;
+  }
+
+  function pickRandomPath(size, blocked, len, rand) {
+    var cells = size * size;
+    var starts = [];
+    for (var i = 0; i < cells; i++) {
+      if (!blocked[i]) {
+        starts.push(i);
+      }
+    }
+    shuffleInPlace(starts, rand);
+    for (var s = 0; s < starts.length; s++) {
+      var path = findPathOfLength(starts[s], size, blocked, len, rand);
+      if (path) {
+        return path;
+      }
+    }
+    return null;
+  }
+
+  function buildSeedGrid(size, rand, partitionOverride) {
+    var partition =
+      partitionOverride ||
+      randomPartition(size * size, MIN_WORD_LEN, MAX_WORD_LEN, rand);
+    if (!partition) {
+      return null;
+    }
+    if (!partitionOverride) {
+      shuffleInPlace(partition, rand);
+    }
+
+    var blocked = {};
+    var grid = new Array(size * size);
+    var seedWords = [];
+
+    for (var p = 0; p < partition.length; p++) {
+      var wordLen = partition[p];
+      var path = pickRandomPath(size, blocked, wordLen, rand);
+      if (!path) {
+        return null;
+      }
+      var candidates = WORDS_BY_LENGTH[wordLen];
+      if (!candidates || !candidates.length) {
+        return null;
+      }
+      var word = candidates[Math.floor(rand() * candidates.length)];
+      for (var i = 0; i < wordLen; i++) {
+        grid[path[i]] = word.charAt(i);
+        blocked[path[i]] = true;
+      }
+      seedWords.push({ word: word, path: path.slice() });
+    }
+
+    return { grid: grid, seedWords: seedWords };
+  }
+
+  function buildSeedGridDescending(size, rand) {
+    var partition = randomPartition(size * size, MIN_WORD_LEN, MAX_WORD_LEN, rand);
+    if (!partition) {
+      return null;
+    }
+    partition.sort(function (a, b) {
+      return b - a;
+    });
+    return buildSeedGrid(size, rand, partition);
+  }
+
+  var FALLBACK_PARTITIONS = [
+    [5, 5, 5, 5, 5],
+    [8, 8, 5, 4],
+    [8, 7, 5, 5],
+    [6, 6, 6, 4, 3],
+    [4, 4, 4, 4, 4, 5],
+    [3, 3, 3, 4, 4, 4, 4],
+  ];
+
+  function seedCoversAllCells(seedWords, size) {
+    var claimed = {};
+    if (!Array.isArray(seedWords)) {
+      return false;
+    }
+    for (var i = 0; i < seedWords.length; i++) {
+      var path = seedWords[i] && seedWords[i].path;
+      if (!Array.isArray(path)) {
+        return false;
+      }
+      for (var j = 0; j < path.length; j++) {
+        claimed[path[j]] = true;
+      }
+    }
+    return countClaimed(claimed) === size * size;
   }
 
   function generateGrid(dateKey, size) {
@@ -399,32 +660,62 @@ var SumSwipeUtils = (function () {
     }
 
     var rand = mulberry32(hashDateKey(dateKey + ":grid"));
-    var cells = size * size;
     var best = null;
 
-    for (var attempt = 0; attempt < 40; attempt++) {
-      var grid = [];
-      for (var i = 0; i < cells; i++) {
-        grid.push(LETTER_BAG.charAt(Math.floor(rand() * LETTER_BAG.length)));
+    for (var attempt = 0; attempt < GENERATOR_ATTEMPTS; attempt++) {
+      var built = buildSeedGrid(size, rand);
+      if (!built) {
+        built = buildSeedGridDescending(size, rand);
       }
-      if (countVowels(grid) < 4) {
+      if (!built || !seedCoversAllCells(built.seedWords, size)) {
         continue;
       }
-      var solution = findAllWords(grid, size);
-      if (!best || solution.words.length > best.words.length) {
-        best = { grid: grid, solution: solution };
+      var solution = findAllWords(built.grid, size);
+      if (!solution.words.length) {
+        continue;
       }
-      if (solution.words.length >= 12 && solution.maxScore >= 120) {
+      if (!best || solution.words.length > best.solution.words.length) {
+        best = {
+          grid: built.grid,
+          solution: solution,
+          seedWords: built.seedWords,
+        };
+      }
+      if (solution.words.length >= TARGET_WORD_COUNT) {
         break;
       }
     }
 
     if (!best) {
-      var fallback = [];
-      for (var j = 0; j < cells; j++) {
-        fallback.push(LETTER_BAG.charAt(j % LETTER_BAG.length));
+      for (var f = 0; f < FALLBACK_PARTITIONS.length; f++) {
+        for (var fb = 0; fb < 30; fb++) {
+          var fallbackBuilt = buildSeedGrid(size, rand, FALLBACK_PARTITIONS[f].slice());
+          if (!fallbackBuilt || !seedCoversAllCells(fallbackBuilt.seedWords, size)) {
+            continue;
+          }
+          var fallbackSolution = findAllWords(fallbackBuilt.grid, size);
+          if (!fallbackSolution.words.length) {
+            continue;
+          }
+          if (!best || fallbackSolution.words.length > best.solution.words.length) {
+            best = {
+              grid: fallbackBuilt.grid,
+              solution: fallbackSolution,
+              seedWords: fallbackBuilt.seedWords,
+            };
+          }
+          if (fallbackSolution.words.length >= TARGET_WORD_COUNT) {
+            break;
+          }
+        }
+        if (best && best.solution.words.length >= TARGET_WORD_COUNT) {
+          break;
+        }
       }
-      best = { grid: fallback, solution: findAllWords(fallback, size) };
+    }
+
+    if (!best) {
+      throw new Error("SumSwipe: failed to generate puzzle for " + dateKey);
     }
 
     var rows = [];
@@ -438,17 +729,16 @@ var SumSwipeUtils = (function () {
       grid: best.grid.slice(),
       rows: rows,
       words: best.solution.words.slice(),
-      maxScore: best.solution.maxScore,
-      boostedScore: best.solution.boostedScore,
       wordCount: best.solution.words.length,
-      bestMult: best.solution.bestMult || {},
+      seedWords: best.seedWords,
+      cellCount: size * size,
     };
     puzzleCache[cacheKey] = puzzle;
     return puzzle;
   }
 
   function findAllWords(grid, size) {
-    var bestMult = {};
+    var found = {};
     var neighbors = [];
     var i;
     for (i = 0; i < grid.length; i++) {
@@ -460,23 +750,10 @@ var SumSwipeUtils = (function () {
       }
     }
 
-    function multiplierFromVisits(visits) {
-      var maxCount = 1;
-      for (var key in visits) {
-        if (Object.prototype.hasOwnProperty.call(visits, key) && visits[key] > maxCount) {
-          maxCount = visits[key];
-        }
-      }
-      return Math.min(MAX_TILE_REUSE, maxCount);
-    }
-
-    function dfs(idx, visits, letters) {
+    function dfs(idx, used, letters) {
       if (letters.length >= MIN_WORD_LEN && letters.length <= MAX_WORD_LEN) {
         if (DICTIONARY[letters]) {
-          var mult = multiplierFromVisits(visits);
-          if (!bestMult[letters] || mult > bestMult[letters]) {
-            bestMult[letters] = mult;
-          }
+          found[letters] = true;
         }
       }
       if (letters.length >= MAX_WORD_LEN) {
@@ -485,180 +762,68 @@ var SumSwipeUtils = (function () {
       var nexts = neighbors[idx];
       for (var n = 0; n < nexts.length; n++) {
         var next = nexts[n];
-        var used = visits[next] || 0;
-        if (used >= MAX_TILE_REUSE) {
+        if (used[next]) {
           continue;
         }
-        visits[next] = used + 1;
-        dfs(next, visits, letters + grid[next]);
-        if (used === 0) {
-          delete visits[next];
-        } else {
-          visits[next] = used;
-        }
+        used[next] = true;
+        dfs(next, used, letters + grid[next]);
+        delete used[next];
       }
     }
 
     for (i = 0; i < grid.length; i++) {
-      var visits = {};
-      visits[i] = 1;
-      dfs(i, visits, grid[i]);
+      var used = {};
+      used[i] = true;
+      dfs(i, used, grid[i]);
     }
 
-    var words = Object.keys(bestMult).sort();
-    // Tier target is base (1×) sums. Tile-reuse multipliers are bonus on top.
-    var maxScore = 0;
-    var boostedScore = 0;
-    for (i = 0; i < words.length; i++) {
-      var base = wordSum(words[i]);
-      maxScore += base;
-      boostedScore += base * bestMult[words[i]];
-    }
+    var words = Object.keys(found).sort();
     return {
       words: words,
-      maxScore: maxScore,
-      boostedScore: boostedScore,
-      bestMult: bestMult,
+      wordCount: words.length,
     };
   }
 
-  function scoreFoundEntries(entries) {
-    var total = 0;
-    if (!Array.isArray(entries)) {
-      return 0;
-    }
-    for (var i = 0; i < entries.length; i++) {
-      var entry = entries[i];
-      if (!entry || !entry.word) {
-        continue;
-      }
-      var mult = entry.mult || 1;
-      if (mult < 1) {
-        mult = 1;
-      }
-      if (mult > MAX_TILE_REUSE) {
-        mult = MAX_TILE_REUSE;
-      }
-      total += wordSum(entry.word) * mult;
-    }
-    return total;
-  }
-
-  /** @deprecated use scoreFoundEntries — kept for older smoke callers */
-  function scoreWords(words) {
-    if (!Array.isArray(words)) {
-      return 0;
-    }
-    if (words.length && typeof words[0] === "object") {
-      return scoreFoundEntries(words);
-    }
-    var total = 0;
-    for (var i = 0; i < words.length; i++) {
-      total += wordSum(words[i]);
-    }
-    return total;
-  }
-
-  /** Fraction of maxScore required to reach an integer rating 0…RATING_MAX. */
-  function ratingThresholdRatio(level) {
-    var n = parseInt(level, 10);
-    if (!n || n <= 0) {
-      return 0;
-    }
-    if (n >= RATING_MAX) {
-      return 1;
-    }
-    return (Math.pow(RATING_BASE, n) - 1) / (Math.pow(RATING_BASE, RATING_MAX) - 1);
-  }
-
   /**
-   * Log-scaled 0…9 rating from points vs the day’s 1× total.
-   * Early ratings come cheap; 9/9 needs essentially the full target.
+   * Normalize saved finds to [{ word, path, points }, ...] without overlaps.
    */
-  function ratingForScore(score, maxScore) {
-    if (!maxScore || maxScore <= 0 || !score || score <= 0) {
-      return 0;
-    }
-    var ratio = score / maxScore;
-    if (ratio + 1e-12 >= 1) {
-      return RATING_MAX;
-    }
-    var rating = 0;
-    for (var n = 1; n < RATING_MAX; n++) {
-      if (ratio + 1e-12 >= ratingThresholdRatio(n)) {
-        rating = n;
-      }
-    }
-    return rating;
-  }
-
-  /** Continuous 0…1 fill along the same log curve (for the progress bar). */
-  function ratingFillRatio(score, maxScore) {
-    if (!maxScore || maxScore <= 0 || !score || score <= 0) {
-      return 0;
-    }
-    var ratio = Math.min(1, score / maxScore);
-    var denom = Math.pow(RATING_BASE, RATING_MAX) - 1;
-    return Math.log(1 + ratio * denom) / Math.log(RATING_BASE) / RATING_MAX;
-  }
-
-  function clampMult(mult) {
-    var m = parseInt(mult, 10);
-    if (!m || m < 1) {
-      return 1;
-    }
-    if (m > MAX_TILE_REUSE) {
-      return MAX_TILE_REUSE;
-    }
-    return m;
-  }
-
-  /**
-   * Normalize saved finds to [{ word, mult }, ...].
-   * Accepts legacy string arrays. Clamps multipliers to bestMult when provided.
-   */
-  function sanitizeFoundWords(raw, validSet, bestMult) {
-    var byWord = {};
+  function sanitizeFoundEntries(raw, grid, size, validSet) {
+    var claimed = {};
+    var out = [];
     if (!Array.isArray(raw)) {
-      return [];
+      return { found: [], claimed: claimed };
     }
     for (var i = 0; i < raw.length; i++) {
       var item = raw[i];
-      var w;
-      var mult = 1;
-      if (typeof item === "string") {
-        w = normalizeWord(item);
-      } else if (item && typeof item === "object") {
-        w = normalizeWord(item.word);
-        mult = clampMult(item.mult);
-      } else {
+      if (!item || !item.word) {
         continue;
       }
-      if (!w) {
+      var w = normalizeWord(item.word);
+      if (!isDictionaryWord(w)) {
         continue;
       }
       if (validSet && !validSet[w]) {
         continue;
       }
-      if (!isDictionaryWord(w)) {
+      var path = item.path;
+      if (!Array.isArray(path) || !isValidPath(path, size)) {
         continue;
       }
-      if (bestMult && Object.prototype.hasOwnProperty.call(bestMult, w)) {
-        mult = Math.min(mult, clampMult(bestMult[w]));
-      } else if (bestMult) {
-        // Word not in today's solution map — drop.
+      if (pathUsesClaimed(path, claimed)) {
         continue;
       }
-      if (!byWord[w] || mult > byWord[w]) {
-        byWord[w] = mult;
+      var resolved = resolvePathWord(grid, path);
+      if (resolved.word !== w) {
+        continue;
       }
+      var pts = wordPoints(w);
+      claimPath(claimed, path);
+      out.push({ word: w, path: path.slice(), points: pts });
     }
-    var out = Object.keys(byWord)
-      .sort()
-      .map(function (word) {
-        return { word: word, mult: byWord[word] };
-      });
-    return out;
+    out.sort(function (a, b) {
+      return a.word.localeCompare(b.word);
+    });
+    return { found: out, claimed: claimed };
   }
 
   function earliestDateKey(now) {
@@ -673,12 +838,15 @@ var SumSwipeUtils = (function () {
     MIN_WORD_LEN: MIN_WORD_LEN,
     MAX_WORD_LEN: MAX_WORD_LEN,
     GRID_SIZE: GRID_SIZE,
-    MAX_TILE_REUSE: MAX_TILE_REUSE,
+    FILL_BONUS: FILL_BONUS,
     MAX_HISTORY_DAYS: MAX_HISTORY_DAYS,
-    RATING_MAX: RATING_MAX,
-    RATING_BASE: RATING_BASE,
+    TARGET_WORD_COUNT: TARGET_WORD_COUNT,
+    GENERATOR_ATTEMPTS: GENERATOR_ATTEMPTS,
     letterValue: letterValue,
     wordSum: wordSum,
+    lengthFactor: lengthFactor,
+    wordPoints: wordPoints,
+    scoreWordsWithFill: scoreWordsWithFill,
     normalizeWord: normalizeWord,
     reverseWord: reverseWord,
     indexToRowCol: indexToRowCol,
@@ -688,10 +856,12 @@ var SumSwipeUtils = (function () {
     focusAfterBackspace: focusAfterBackspace,
     countsTowardDoubleTap: countsTowardDoubleTap,
     isDoubleTap: isDoubleTap,
-    countTileVisits: countTileVisits,
-    pathMultiplier: pathMultiplier,
-    wordPathScore: wordPathScore,
     isValidPath: isValidPath,
+    isCellClaimed: isCellClaimed,
+    countClaimed: countClaimed,
+    claimPath: claimPath,
+    pathUsesClaimed: pathUsesClaimed,
+    rebuildClaimedFromFound: rebuildClaimedFromFound,
     pathToWord: pathToWord,
     flattenGrid: flattenGrid,
     isDictionaryWord: isDictionaryWord,
@@ -703,15 +873,10 @@ var SumSwipeUtils = (function () {
     shiftDateKey: shiftDateKey,
     todayKey: todayKey,
     earliestDateKey: earliestDateKey,
+    randomPartition: randomPartition,
     generateGrid: generateGrid,
     findAllWords: findAllWords,
-    scoreWords: scoreWords,
-    scoreFoundEntries: scoreFoundEntries,
-    clampMult: clampMult,
-    ratingThresholdRatio: ratingThresholdRatio,
-    ratingForScore: ratingForScore,
-    ratingFillRatio: ratingFillRatio,
-    sanitizeFoundWords: sanitizeFoundWords,
+    sanitizeFoundEntries: sanitizeFoundEntries,
     clearPuzzleCache: clearPuzzleCache,
   };
 })();
@@ -733,14 +898,14 @@ if (typeof module !== "undefined" && module.exports) {
   }
 
   var utils = SumSwipeUtils;
-  var storageKey = "sumswipe-daily-v4";
+  var storageKey = "sumswipe-daily-v5";
 
   var state = {
     dateKey: utils.todayKey(),
     puzzle: null,
     validSet: {},
-    bestMult: {},
     found: [],
+    claimed: {},
     path: [],
     dragging: false,
     pointerId: null,
@@ -764,8 +929,9 @@ if (typeof module !== "undefined" && module.exports) {
     liveSum: document.getElementById("ssLiveSum"),
     liveEq: document.getElementById("ssLiveEq"),
     scoreValue: document.getElementById("ssScoreValue"),
-    scoreMax: document.getElementById("ssScoreMax"),
-    ratingFill: document.getElementById("ssRatingFill"),
+    fillValue: document.getElementById("ssFillValue"),
+    fillMax: document.getElementById("ssFillMax"),
+    fillBar: document.getElementById("ssFillBar"),
     foundList: document.getElementById("ssFoundList"),
     foundCount: document.getElementById("ssFoundCount"),
     status: document.getElementById("ssStatus"),
@@ -804,7 +970,14 @@ if (typeof module !== "undefined" && module.exports) {
     var all = loadAllProgress();
     var saved = all[state.dateKey];
     var raw = saved && Array.isArray(saved.found) ? saved.found : [];
-    state.found = utils.sanitizeFoundWords(raw, state.validSet, state.bestMult);
+    var cleaned = utils.sanitizeFoundEntries(
+      raw,
+      state.puzzle.grid,
+      state.puzzle.size,
+      state.validSet
+    );
+    state.found = cleaned.found;
+    state.claimed = cleaned.claimed;
   }
 
   function setStatus(msg, kind) {
@@ -817,45 +990,41 @@ if (typeof module !== "undefined" && module.exports) {
     }
   }
 
+  function claimedCount() {
+    return utils.countClaimed(state.claimed);
+  }
+
+  function cellTotal() {
+    return state.puzzle ? state.puzzle.size * state.puzzle.size : utils.GRID_SIZE * utils.GRID_SIZE;
+  }
+
   function currentScore() {
-    return utils.scoreFoundEntries(state.found);
+    return utils.scoreWordsWithFill(state.found, claimedCount(), state.puzzle.size);
   }
 
   function foundWordCount() {
     return state.found.length;
   }
 
-  function getFoundMult(word) {
+  function hasFoundWord(word) {
     for (var i = 0; i < state.found.length; i++) {
       if (state.found[i].word === word) {
-        return state.found[i].mult || 1;
+        return true;
       }
     }
-    return 0;
+    return false;
   }
 
-  function upsertFound(word, mult) {
-    mult = utils.clampMult(mult);
-    var allowed = state.bestMult[word] || 1;
-    mult = Math.min(mult, utils.clampMult(allowed));
-    for (var i = 0; i < state.found.length; i++) {
-      if (state.found[i].word === word) {
-        if (mult > state.found[i].mult) {
-          state.found[i].mult = mult;
-          return "upgraded";
-        }
-        return "duplicate";
-      }
+  function addFound(word, path, points) {
+    if (hasFoundWord(word)) {
+      return "duplicate";
     }
-    state.found.push({ word: word, mult: mult });
+    state.found.push({ word: word, path: path.slice(), points: points });
+    utils.claimPath(state.claimed, path);
     state.found.sort(function (a, b) {
       return a.word.localeCompare(b.word);
     });
     return "added";
-  }
-
-  function currentRating() {
-    return utils.ratingForScore(currentScore(), state.puzzle.maxScore);
   }
 
   function formatDisplayDate(dateKey) {
@@ -874,27 +1043,34 @@ if (typeof module !== "undefined" && module.exports) {
   function renderChrome() {
     var today = utils.todayKey();
     var score = currentScore();
-    var rating = currentRating();
-    var fill = utils.ratingFillRatio(score, state.puzzle.maxScore);
+    var claimed = claimedCount();
+    var total = cellTotal();
+    var fillRatio = total ? claimed / total : 0;
 
     els.title.textContent = "SumSwipe";
     els.blurb.textContent =
       "Daily puzzle for " +
       formatDisplayDate(state.dateKey) +
-      ". Find words (A=1…Z=26). Drag to swipe, or click letters and submit.";
+      ". Claim all 25 cells with words (A=1…Z=26). Drag to swipe, or click letters and submit.";
     els.progress.textContent =
-      foundWordCount() +
-      " word" +
-      (foundWordCount() === 1 ? "" : "s") +
-      " · " +
-      rating +
-      "/" +
-      utils.RATING_MAX;
+      claimed + "/" + total + " cells · " + score + " pts";
 
-    els.scoreValue.textContent = String(rating);
-    els.scoreMax.textContent = String(utils.RATING_MAX);
-    els.ratingFill.style.width = Math.round(fill * 1000) / 10 + "%";
-    els.ratingFill.dataset.rating = String(rating);
+    els.scoreValue.textContent = String(score);
+    if (els.fillValue) {
+      els.fillValue.textContent = String(claimed);
+    }
+    if (els.fillMax) {
+      els.fillMax.textContent = String(total);
+    }
+    if (els.fillBar) {
+      els.fillBar.style.width = Math.round(fillRatio * 1000) / 10 + "%";
+      els.fillBar.dataset.fill = String(claimed);
+      if (claimed >= total) {
+        els.fillBar.classList.add("is-complete");
+      } else {
+        els.fillBar.classList.remove("is-complete");
+      }
+    }
     els.foundCount.textContent = String(foundWordCount());
 
     var earliest = utils.earliestDateKey();
@@ -906,14 +1082,12 @@ if (typeof module !== "undefined" && module.exports) {
   function renderFound() {
     els.foundList.innerHTML = "";
     var entries = state.found.slice().sort(function (a, b) {
-      var sa = utils.wordSum(a.word) * (a.mult || 1);
-      var sb = utils.wordSum(b.word) * (b.mult || 1);
-      return sb - sa || a.word.localeCompare(b.word);
+      return (b.points || 0) - (a.points || 0) || a.word.localeCompare(b.word);
     });
     if (!entries.length) {
       var empty = document.createElement("li");
       empty.className = "ss-found-empty";
-      empty.textContent = "No words yet — swipe a path, or click letters and hit Submit.";
+      empty.textContent = "No words yet — swipe a path through open cells, or click letters and hit Submit.";
       els.foundList.appendChild(empty);
       return;
     }
@@ -923,11 +1097,10 @@ if (typeof module !== "undefined" && module.exports) {
       li.className = "ss-found-item";
       var w = document.createElement("span");
       w.className = "ss-found-word";
-      w.textContent =
-        entry.word + (entry.mult > 1 ? " ×" + entry.mult : "");
+      w.textContent = entry.word;
       var pts = document.createElement("span");
       pts.className = "ss-found-pts";
-      pts.textContent = "+" + utils.wordSum(entry.word) * (entry.mult || 1);
+      pts.textContent = "+" + (entry.points || utils.wordPoints(entry.word));
       li.appendChild(w);
       li.appendChild(pts);
       els.foundList.appendChild(li);
@@ -979,15 +1152,20 @@ if (typeof module !== "undefined" && module.exports) {
     var scoredWord = resolved.word || forward;
     var displayWord = scoredWord || "—";
     var base = scoredWord ? utils.wordSum(scoredWord) : null;
-    var mult = utils.pathMultiplier(state.path);
-    var total = base == null ? null : base * mult;
+    var factor = scoredWord ? utils.lengthFactor(scoredWord.length) : null;
+    var total = scoredWord ? utils.wordPoints(scoredWord) : null;
 
     els.liveWord.textContent = displayWord;
     if (resolved.word && resolved.reversed && forward) {
       els.liveWord.textContent = resolved.word + " ← " + forward;
     }
-    els.liveSum.textContent =
-      total == null ? "—" : mult > 1 ? total + " (" + mult + "×)" : String(total);
+    if (total == null) {
+      els.liveSum.textContent = "—";
+    } else if (factor && factor !== 1) {
+      els.liveSum.textContent = base + " ×" + factor + " = " + total;
+    } else {
+      els.liveSum.textContent = String(total);
+    }
 
     if (!forward) {
       els.liveEq.textContent =
@@ -1002,20 +1180,18 @@ if (typeof module !== "undefined" && module.exports) {
     }
     var msg = parts.join(" + ") + " = " + utils.wordSum(forward);
     if (resolved.word && resolved.reversed) {
-      msg += " → " + resolved.word + " (" + base + ")";
+      msg += " → " + resolved.word;
     }
-    if (mult > 1) {
-      msg += " × " + mult + " = " + total;
+    if (factor && factor !== 1) {
+      msg += " × " + factor + " = " + total;
     }
     els.liveEq.textContent = msg;
   }
 
   function highlightPath() {
     var cells = els.grid.querySelectorAll(".ss-cell");
-    var visits = utils.countTileVisits(state.path);
     for (var i = 0; i < cells.length; i++) {
-      cells[i].classList.remove("is-path", "is-path-head", "is-reused", "is-focused");
-      cells[i].removeAttribute("data-visits");
+      cells[i].classList.remove("is-path", "is-path-head", "is-focused");
     }
     for (var j = 0; j < state.path.length; j++) {
       var idx = state.path[j];
@@ -1024,10 +1200,6 @@ if (typeof module !== "undefined" && module.exports) {
         continue;
       }
       cell.classList.add("is-path");
-      if (visits[idx] > 1) {
-        cell.classList.add("is-reused");
-        cell.setAttribute("data-visits", String(visits[idx]));
-      }
       if (j === state.path.length - 1) {
         cell.classList.add("is-path-head");
       }
@@ -1082,6 +1254,9 @@ if (typeof module !== "undefined" && module.exports) {
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "ss-cell";
+      if (state.claimed[i]) {
+        btn.classList.add("is-claimed");
+      }
       btn.dataset.index = String(i);
       btn.setAttribute(
         "aria-label",
@@ -1122,10 +1297,11 @@ if (typeof module !== "undefined" && module.exports) {
     state.dateKey = dateKey;
     state.puzzle = utils.generateGrid(dateKey, utils.GRID_SIZE);
     state.validSet = {};
-    state.bestMult = state.puzzle.bestMult || {};
     for (var i = 0; i < state.puzzle.words.length; i++) {
       state.validSet[state.puzzle.words[i]] = true;
     }
+    state.found = [];
+    state.claimed = {};
     state.path = [];
     state.dragging = false;
     state.pointerId = null;
@@ -1142,12 +1318,17 @@ if (typeof module !== "undefined" && module.exports) {
     var isToday = state.dateKey === utils.todayKey();
     setStatus(
       (isToday ? "Today’s grid" : "This day’s grid") +
-        " · " +
-        currentRating() +
-        "/" +
-        utils.RATING_MAX +
-        "."
+        " · claim all " +
+        cellTotal() +
+        " cells."
     );
+  }
+
+  function celebrateFullFill() {
+    root.classList.add("ss-celebrate");
+    setTimeout(function () {
+      root.classList.remove("ss-celebrate");
+    }, 900);
   }
 
   function tryCommitPath() {
@@ -1159,9 +1340,14 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
 
+    if (utils.pathUsesClaimed(state.path, state.claimed)) {
+      setStatus("That path uses cells you already claimed.", "error");
+      clearPath();
+      return;
+    }
+
     var resolved = utils.resolvePathWord(state.puzzle.grid, state.path);
     var attempted = utils.pathToWord(state.puzzle.grid, state.path);
-    var mult = utils.pathMultiplier(state.path);
 
     if (!resolved.word) {
       setStatus('"' + attempted + '" isn’t a word (try the other direction too).', "error");
@@ -1170,63 +1356,36 @@ if (typeof module !== "undefined" && module.exports) {
     }
 
     if (!state.validSet[resolved.word]) {
-      setStatus(resolved.word + " isn’t on this grid path set.", "error");
+      setStatus(resolved.word + " isn’t on this grid.", "error");
       clearPath();
       return;
     }
 
-    var result = upsertFound(resolved.word, mult);
-    if (result === "duplicate") {
-      setStatus(
-        "Already have " +
-          resolved.word +
-          (getFoundMult(resolved.word) > 1
-            ? " at ×" + getFoundMult(resolved.word)
-            : "") +
-          ". Reuse a tile for a higher multiplier.",
-        "error"
-      );
+    if (hasFoundWord(resolved.word)) {
+      setStatus("Already claimed with " + resolved.word + ".", "error");
       clearPath();
       return;
     }
 
+    var pts = utils.wordPoints(resolved.word);
+    addFound(resolved.word, state.path, pts);
     saveProgress();
     renderChrome();
+    renderGrid();
     renderFound();
     clearPath();
 
-    var pts = utils.wordSum(resolved.word) * mult;
-    var rating = currentRating();
     var note = resolved.reversed ? " (reverse)" : "";
-    var multNote = mult > 1 ? " ×" + mult : "";
-    var upgradeNote = result === "upgraded" ? " (upgraded)" : "";
-    if (rating >= utils.RATING_MAX) {
+    var full = claimedCount() >= cellTotal();
+    if (full) {
       setStatus(
-        "9/9! " +
-          resolved.word +
-          multNote +
-          " +" +
-          pts +
-          note +
-          upgradeNote,
+        "Board filled! " + resolved.word + " +" + pts + note + " · " + currentScore() + " pts (+15% bonus)",
         "success"
       );
-      root.classList.add("ss-celebrate");
-      setTimeout(function () {
-        root.classList.remove("ss-celebrate");
-      }, 700);
+      celebrateFullFill();
     } else {
       setStatus(
-        resolved.word +
-          multNote +
-          " +" +
-          pts +
-          note +
-          upgradeNote +
-          " · " +
-          rating +
-          "/" +
-          utils.RATING_MAX,
+        resolved.word + " +" + pts + note + " · " + claimedCount() + "/" + cellTotal() + " cells",
         "success"
       );
     }
@@ -1275,7 +1434,13 @@ if (typeof module !== "undefined" && module.exports) {
     if (index < 0 || index >= state.puzzle.grid.length) {
       return;
     }
+    if (utils.isCellClaimed(state.claimed, index) && state.path.indexOf(index) === -1) {
+      return;
+    }
     if (state.path.length === 0) {
+      if (utils.isCellClaimed(state.claimed, index)) {
+        return;
+      }
       state.path.push(index);
       state.focusIndex = index;
       highlightPath();
@@ -1285,19 +1450,7 @@ if (typeof module !== "undefined" && module.exports) {
     if (index === last) {
       return;
     }
-    // Returning to the previous tile: reuse when under the visit cap (A→Z→A),
-    // otherwise undo that step.
     if (state.path.length >= 2 && index === state.path[state.path.length - 2]) {
-      var prevVisits = utils.countTileVisits(state.path);
-      if (
-        (prevVisits[index] || 0) < utils.MAX_TILE_REUSE &&
-        state.path.length < utils.MAX_WORD_LEN
-      ) {
-        state.path.push(index);
-        state.focusIndex = index;
-        highlightPath();
-        return;
-      }
       state.path.pop();
       state.focusIndex = state.path[state.path.length - 1];
       highlightPath();
@@ -1306,11 +1459,13 @@ if (typeof module !== "undefined" && module.exports) {
     if (!utils.areAdjacent(last, index, state.puzzle.size)) {
       return;
     }
-    if (state.path.length >= utils.MAX_WORD_LEN) {
+    if (state.path.indexOf(index) !== -1) {
       return;
     }
-    var visits = utils.countTileVisits(state.path);
-    if ((visits[index] || 0) >= utils.MAX_TILE_REUSE) {
+    if (utils.isCellClaimed(state.claimed, index)) {
+      return;
+    }
+    if (state.path.length >= utils.MAX_WORD_LEN) {
       return;
     }
     state.path.push(index);
@@ -1543,11 +1698,13 @@ if (typeof module !== "undefined" && module.exports) {
   }
   els.reset.addEventListener("click", function () {
     state.found = [];
+    state.claimed = {};
     saveProgress();
     clearPath();
     renderChrome();
+    renderGrid();
     renderFound();
-    setStatus("Day’s finds cleared.");
+    setStatus("Day’s progress cleared.");
   });
 
   function moveFocus(dr, dc) {

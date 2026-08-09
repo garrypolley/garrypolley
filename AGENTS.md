@@ -99,7 +99,7 @@ hugo --gc --minify  # production-like build → public/
 - Front matter: `title`, `slug`, `date`, `short`, `draft`
 - Permalinks: `/game/:slug/`
 - Interactive UI can reuse tool shortcodes/JS/CSS (`static/css/tool.css` is already global)
-- Existing games: SumSwipe (`{{< sumSwipe >}}` — daily word-sum hunt with 0–9 log rating)
+- Existing games: SumSwipe (`{{< sumSwipe >}}` — daily 5×5 fill-the-board word puzzle)
 - Games are navigable via the Games menu; they are not included in `mainSections` (home feed)
 - Old `/tool/sumswipe/` redirects to `/game/sumswipe/`
 

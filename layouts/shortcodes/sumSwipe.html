@@ -14,12 +14,16 @@
           <div class="ss-score-pair">
             <span class="ss-live-label">Score</span>
             <strong id="ssScoreValue" class="ss-score-value">0</strong>
+          </div>
+          <div class="ss-score-pair">
+            <span class="ss-live-label">Fill</span>
+            <strong id="ssFillValue" class="ss-score-value">0</strong>
             <span class="ss-score-divider">/</span>
-            <span id="ssScoreMax" class="ss-score-max">9</span>
+            <span id="ssFillMax" class="ss-score-max">25</span>
           </div>
         </div>
-        <div class="ss-rating-bar" aria-hidden="true">
-          <div id="ssRatingFill" class="ss-rating-fill" data-rating="0"></div>
+        <div class="ss-fill-bar" aria-hidden="true">
+          <div id="ssFillBar" class="ss-fill-fill" data-fill="0"></div>
         </div>
       </div>
 
@@ -58,10 +62,10 @@
     </div>
 
     <aside class="ss-sidebar">
-      <h4 class="ss-sidebar-title">Rating</h4>
+      <h4 class="ss-sidebar-title">Fill mode</h4>
       <p class="tool-hint">
-        Score is 0–9 on a log scale from the day’s word values. Early steps come
-        quickly; 9/9 is rare.
+        Each word claims its cells permanently. Later words can only use open tiles.
+        Fill all 25 cells to finish the board and earn a +15% score bonus.
       </p>
 
       <h4 class="ss-sidebar-title">
@@ -73,11 +77,11 @@
       <div class="ss-legend">
         <p class="ss-legend-title">Rules</p>
         <p class="tool-hint">
-          A=1…Z=26. Adjacent includes diagonals. Tiles may be reused (max 3 visits each).
-          Reusing the same tile twice/thrice multiplies that word by 2×/3× — multipliers do not stack across tiles.
-          Click or drag through letters; click an adjacent tile to extend (including
-          back onto the previous tile to reuse it, e.g. GAZA).
-          Tap outside the current path to start a new selection.
+          A=1…Z=26. Adjacent includes diagonals. No reusing a cell within one word
+          (classic Boggle). Sliding back to the previous cell undoes that step.
+          Claimed cells stay locked. Longer words score more via length factors
+          (4→×1.15, 5→×1.35, 6→×1.6, 7+→×1.9).
+          Click or drag through open letters; tap a non-adjacent tile to restart.
           Release after a swipe to submit, double-tap the last letter, or press Submit word.
           Undo with Backspace or Clear.
           Keyboard: arrows move, Space adds, Enter submits, Backspace undoes, Esc clears.
