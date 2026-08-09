@@ -21,6 +21,15 @@ check("letterValue maps A=1 through Z=26", function () {
   assert.strictEqual(utils.letterValue("z"), 26);
 });
 
+check("ENABLE dictionary loads and includes BLEAT", function () {
+  assert.ok(utils.ensureDictionaryLoadedSync(), "dictionary file should load");
+  var meta = utils.getDictionaryMeta();
+  assert.ok(meta.wordCount > 20000, "wordCount " + meta.wordCount);
+  assert.strictEqual(utils.isDictionaryWord("BLEAT"), true);
+  assert.strictEqual(utils.isDictionaryWord("CAT"), true);
+  assert.strictEqual(utils.isDictionaryWord("XYZQ"), false);
+});
+
 check("lengthFactor and wordPoints use length bonuses", function () {
   assert.strictEqual(utils.lengthFactor(3), 1);
   assert.strictEqual(utils.lengthFactor(4), 1.15);

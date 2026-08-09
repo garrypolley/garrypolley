@@ -293,65 +293,96 @@ var SumSwipeUtils = (function () {
     return out;
   }
 
-  var BASE_WORDS = [
-    "ADD","AGE","AIR","AND","ANT","APE","ARC","ARE","ARK","ARM","ART","ASH","ASK",
-    "BAG","BAT","BED","BEE","BET","BIG","BIT","BOX","BOY","BUS","BUT","BUY",
-    "CAB","CAN","CAP","CAR","CAT","COW","CRY","CUP","CUT",
-    "DAD","DAY","DEN","DID","DIE","DIG","DIM","DIP","DOG","DOT","DRY","DUE",
-    "EAR","EAT","EEL","EGG","ELF","END","ERA","EVE","EYE",
-    "FAN","FAR","FAT","FED","FEW","FIG","FIN","FIR","FIT","FIX","FLY","FOG","FOR","FOX","FUN","FUR",
-    "GAP","GAS","GEL","GEM","GET","GIG","GIN","GOD","GOT","GUM","GUN","GUY","GYM",
-    "HAD","HAM","HAS","HAT","HAY","HEN","HER","HID","HIM","HIP","HIS","HIT","HOG","HOP","HOT","HOW","HUB","HUE","HUG","HUM","HUT",
-    "ICE","ILL","INK","INN","ION","ITS","IVY",
-    "JAM","JAR","JAW","JAY","JET","JOB","JOG","JOY","JUG",
-    "KEY","KID","KIN","KIT",
-    "LAB","LAD","LAG","LAP","LAW","LAY","LED","LEG","LET","LID","LIE","LIP","LIT","LOG","LOT","LOW",
-    "MAD","MAN","MAP","MAT","MAY","MEN","MET","MIX","MOB","MOM","MOP","MUD","MUG",
-    "NAG","NAP","NET","NEW","NIL","NIP","NOD","NOR","NOT","NOW","NUN","NUT",
-    "OAK","OAR","OAT","ODD","OFF","OIL","OLD","ONE","ORB","ORE","OUR","OUT","OWE","OWL","OWN",
-    "PAD","PAL","PAN","PAR","PAT","PAW","PAY","PEA","PEN","PER","PET","PIE","PIG","PIN","PIT","PLY","POD","POP","POT","PRO","PUB","PUN","PUP","PUT",
-    "RAG","RAM","RAN","RAP","RAT","RAW","RAY","RED","RIB","RID","RIG","RIM","RIP","ROB","ROD","ROT","ROW","RUB","RUG","RUM","RUN",
-    "SAD","SAG","SAP","SAT","SAW","SAY","SEA","SET","SEW","SHE","SHY","SIN","SIP","SIR","SIT","SIX","SKI","SKY","SLY","SOB","SOD","SON","SOW","SOY","SPA","SPY","SUB","SUM","SUN","SUP",
-    "TAB","TAD","TAG","TAN","TAP","TAR","TAX","TEA","TEN","THE","TIE","TIN","TIP","TOE","TON","TOO","TOP","TOW","TOY","TRY","TUB","TUG","TWO",
-    "URN","USE",
-    "VAN","VAT","VET","VIA","VOW",
-    "WAD","WAG","WAR","WAS","WAX","WAY","WEB","WED","WEE","WET","WHO","WHY","WIG","WIN","WIT","WOE","WON","WOO","WOW",
-    "YAK","YAM","YAP","YAW","YEA","YES","YET","YOU",
-    "ZAP","ZEN","ZIP","ZOO",
-    "ABLE","ACID","AGED","AIMS","AKIN","ALSO","AREA","ARMY","ARTS","ATOM","AUNT","AVID","AWAY",
-    "BACK","BAKE","BALL","BAND","BANK","BARE","BARK","BARN","BASE","BATH","BEAM","BEAN","BEAR","BEAT","BEEN","BELL","BELT","BEND","BEST","BETA","BIKE","BILL","BIND","BIRD","BITE","BLOW","BLUE","BOAT","BODY","BOIL","BOLD","BOMB","BOND","BONE","BOOK","BOOM","BOOT","BORE","BORN","BOSS","BOTH","BOWL","BURN","BUSH","BUSY","BYTE",
-    "CAFE","CAGE","CAKE","CALL","CALM","CAME","CAMP","CARD","CARE","CART","CASE","CASH","CAST","CAVE","CELL","CENT","CHAT","CHEF","CHEW","CHIN","CHIP","CHOP","CITY","CLAM","CLAP","CLAW","CLAY","CLIP","CLUB","CLUE","COAL","COAT","CODE","COIL","COIN","COLD","COMA","COMB","COME","CONE","COOK","COOL","COPE","COPY","CORD","CORE","CORK","CORN","COST","COZY","CRAB","CREW","CROP","CROW","CUBE","CURE","CURL","CUTE",
-    "DAMP","DARE","DARK","DART","DASH","DATA","DATE","DAWN","DAYS","DEAD","DEAF","DEAL","DEAR","DEBT","DECK","DEED","DEEP","DEER","DEMO","DENY","DESK","DIAL","DICE","DIET","DIME","DINE","DIRT","DISC","DISH","DISK","DIVE","DOCK","DOES","DOLE","DOLL","DONE","DOOM","DOOR","DOSE","DOWN","DRAG","DRAW","DREW","DRIP","DROP","DRUG","DRUM","DUAL","DUCK","DUEL","DUET","DULL","DUMB","DUMP","DUNE","DUSK","DUST","DUTY",
-    "EACH","EARL","EARN","EASE","EAST","EASY","EDGE","EDIT","ELSE","EMIT","ENVY","EPIC","EVEN","EVER","EVIL","EXAM","EXIT","FACE","FACT","FADE","FAIL","FAIR","FAKE","FALL","FAME","FANG","FARE","FARM","FAST","FATE","FEAR","FEAT","FEED","FEEL","FELL","FELT","FILE","FILL","FILM","FIND","FINE","FIRE","FIRM","FISH","FIST","FIVE","FLAG","FLAP","FLAT","FLAW","FLEA","FLED","FLEE","FLEW","FLEX","FLIP","FLOW","FOAM","FOIL","FOLD","FOLK","FOND","FOOD","FOOL","FOOT","FORD","FORK","FORM","FORT","FOUL","FOUR","FREE","FROG","FROM","FUEL","FULL","FUME","FUND","FURY","FUSE","FUSS","FUZZ",
-    "GAIN","GALA","GAME","GANG","GATE","GAVE","GAZE","GEAR","GEMS","GENE","GIFT","GIRL","GIVE","GLAD","GLEE","GLEN","GLOW","GLUE","GOAL","GOAT","GOES","GOLD","GOLF","GONE","GOOD","GOSH","GRAB","GRAM","GRAY","GREW","GREY","GRID","GRIM","GRIN","GRIP","GROW","GULF","GUSH","GUST","HACK","HAIL","HAIR","HALF","HALL","HALT","HAND","HANG","HARD","HARM","HATE","HAUL","HAVE","HAWK","HAZE","HEAD","HEAL","HEAP","HEAR","HEAT","HEEL","HELD","HELL","HELP","HERB","HERD","HERE","HERO","HIDE","HIGH","HIKE","HILL","HINT","HIRE","HOLD","HOLE","HOME","HONE","HOOD","HOOK","HOPE","HORN","HOSE","HOST","HOUR","HOWL","HUGE","HULL","HUNG","HUNK","HUNT","HURT","HUSH","IDEA","IDLE","IDOL","INCH","INFO","INTO","IRIS","IRON","ISLE","ITEM",
-    "JACK","JADE","JAIL","JAZZ","JEAN","JEEP","JOIN","JOKE","JOLT","JUMP","JUNK","JURY","JUST","KEEN","KEEP","KICK","KILL","KIND","KING","KISS","KITE","KNEE","KNEW","KNIT","KNOB","KNOT","KNOW",
-    "LACE","LACK","LADY","LAID","LAKE","LAMB","LAME","LAMP","LAND","LANE","LARK","LAST","LATE","LAWN","LAZY","LEAD","LEAF","LEAK","LEAN","LEAP","LEFT","LEND","LENS","LESS","LIAR","LICK","LIED","LIFE","LIFT","LIKE","LILY","LIMB","LIME","LIMP","LINE","LINK","LION","LISP","LIST","LIVE","LOAD","LOAF","LOAN","LOCK","LOFT","LOGO","LONE","LONG","LOOK","LOOM","LOOP","LORD","LOSE","LOSS","LOST","LOUD","LOVE","LUCK","LUMP","LUNG","LURE","LUSH","LUST",
-    "MADE","MAID","MAIL","MAIN","MAKE","MALE","MALL","MALT","MANE","MANY","MARE","MARK","MARS","MART","MASH","MASK","MASS","MAST","MATE","MATH","MAZE","MEAL","MEAN","MEAT","MEET","MELT","MEMO","MEND","MENU","MESH","MESS","MICE","MILD","MILE","MILK","MILL","MIND","MINE","MINT","MISS","MIST","MOAT","MOCK","MODE","MOLD","MOLE","MONK","MOOD","MOON","MOOR","MORE","MOSS","MOST","MOTH","MOVE","MUCH","MUCK","MULE","MUSE","MUSH","MUST","MUTE","MYTH",
-    "NAIL","NAME","NAVY","NEAR","NEAT","NECK","NEED","NEST","NEWS","NEXT","NICE","NICK","NINE","NODE","NONE","NOOK","NOON","NOPE","NORM","NOSE","NOTE","NOUN","NUDE","NULL","NUMB",
-    "OBEY","ODOR","OILY","OMEN","OMIT","ONCE","ONLY","ONTO","OOZE","OPAL","OPEN","ORAL","ORCA","OUST","OVAL","OVEN","OVER","OWED",
-    "PACE","PACK","PACT","PAGE","PAID","PAIL","PAIN","PAIR","PALE","PALM","PARK","PART","PASS","PAST","PATH","PAVE","PAWN","PEAK","PEAR","PEAT","PECK","PEEL","PEER","PELT","PERK","PEST","PICK","PIER","PIKE","PILE","PILL","PINE","PINT","PIPE","PLAN","PLAY","PLEA","PLOD","PLOT","PLOW","PLUG","PLUM","PLUS","POEM","POET","POKE","POLE","POLL","POND","POOL","POOR","POPE","PORE","PORK","PORT","POSE","POST","POUR","PRAY","PREY","PROP","PULL","PULP","PUMP","PUNK","PUNT","PURE","PUSH",
-    "QUIZ","RACE","RACK","RAFT","RAGE","RAID","RAIL","RAIN","RAKE","RAMP","RANK","RARE","RASH","RATE","RAVE","READ","REAL","REAP","REAR","REED","REEF","REEL","RELY","RENT","REST","RICE","RICH","RIDE","RIFE","RIFT","RILE","RING","RIOT","RIPE","RISE","RISK","RITE","ROAD","ROAM","ROAR","ROBE","ROCK","RODE","ROLE","ROLL","ROOF","ROOM","ROOT","ROPE","ROSE","ROSY","ROUT","ROVE","RUBY","RUDE","RUIN","RULE","RUMP","RUNE","RUNG","RUSH","RUST",
-    "SACK","SAFE","SAGA","SAGE","SAID","SAIL","SAKE","SALE","SALT","SAME","SAND","SANE","SANG","SANK","SAVE","SCAN","SCAR","SEAL","SEAM","SEAR","SEAT","SEED","SEEK","SEEM","SEEN","SELF","SELL","SEND","SENT","SETS","SHED","SHIP","SHOE","SHOP","SHOT","SHOW","SHUT","SICK","SIDE","SIFT","SIGH","SIGN","SILK","SILL","SILO","SING","SINK","SITE","SIZE","SKIM","SKIN","SKIP","SLAB","SLAM","SLAP","SLAT","SLAY","SLED","SLEW","SLID","SLIM","SLIP","SLIT","SLOW","SLUG","SLUM","SLUR","SNAP","SNOW","SOAK","SOAP","SOAR","SODA","SOFA","SOFT","SOIL","SOLD","SOLE","SOLO","SOME","SONG","SOON","SORE","SORT","SOUL","SOUP","SOUR","SPAN","SPAR","SPAT","SPIN","SPIT","SPOT","STAR","STAY","STEM","STEP","STEW","STIR","STOP","STOW","STUB","STUD","SUCH","SUIT","SULK","SUMS","SUNK","SURE","SURF","SWAN","SWAP","SWAT","SWAY","SWIM",
-    "TACK","TACO","TAIL","TAKE","TALE","TALK","TALL","TAME","TANK","TAPE","TART","TASK","TAXI","TEAM","TEAR","TELL","TEND","TENT","TERM","TEST","TEXT","THAN","THAT","THAW","THEE","THEM","THEN","THEY","THIN","THIS","THUD","TICK","TIDE","TIDY","TIED","TIER","TILE","TILL","TILT","TIME","TINY","TIRE","TOAD","TOFU","TOIL","TOLD","TOLL","TOMB","TONE","TOOK","TOOL","TOPS","TORE","TORN","TOSS","TOTE","TOUR","TOWN","TOYS","TRAM","TRAP","TRAY","TREE","TREK","TRIM","TRIO","TRIP","TROT","TRUE","TUBE","TUCK","TUNA","TUNE","TURF","TURN","TUSK","TWIN","TYPE",
-    "UGLY","UNDO","UNIT","UNTO","UPON","URGE","USED","USER","VAIN","VALE","VARY","VASE","VAST","VEIL","VEIN","VENT","VERB","VERY","VEST","VETO","VIAL","VIBE","VICE","VIEW","VILE","VINE","VISA","VOID","VOLT","VOTE",
-    "WADE","WAGE","WAIL","WAIT","WAKE","WALK","WALL","WAND","WANE","WANT","WARD","WARM","WARN","WARP","WART","WARY","WASH","WASP","WAVE","WAVY","WEAK","WEAR","WEED","WEEK","WELD","WELL","WENT","WERE","WEST","WHAT","WHEN","WHIP","WHIZ","WIDE","WIFE","WILD","WILL","WILT","WIND","WINE","WING","WINK","WIPE","WIRE","WISE","WISH","WITH","WOLF","WOMB","WOOD","WOOL","WORD","WORE","WORK","WORM","WORN","WRAP","YARD","YARN","YAWN","YEAR","YELL","YELP","YOGA","YOKE","YOLK","YOUR","ZEAL","ZERO","ZEST","ZINC","ZONE","ZOOM",
-    "AFTER","AGAIN","AGENT","AGREE","AHEAD","ALARM","ALBUM","ALERT","ALIEN","ALIGN","ALIKE","ALIVE","ALLOW","ALONE","ALONG","ALTER","AMONG","ANGEL","ANGER","ANGLE","ANGRY","APART","APPLE","APPLY","ARENA","ARGUE","ARISE","ARMOR","ARROW","ASIDE","ASSET","AUDIO","AVOID","AWAIT","AWARD","AWARE","BADGE","BAKER","BASES","BASIC","BASIN","BASIS","BATCH","BEACH","BEANS","BEARD","BEARS","BEAST","BEGAN","BEGIN","BEING","BELLS","BELOW","BENCH","BERRY","BIRTH","BLACK","BLADE","BLAME","BLANK","BLAST","BLAZE","BLEED","BLEND","BLIND","BLOCK","BLOOD","BLOOM","BOARD","BOOST","BOOTH","BOUND","BRAIN","BRAND","BRASS","BRAVE","BREAD","BREAK","BREED","BRICK","BRIDE","BRIEF","BRING","BROAD","BROKE","BROOK","BROWN","BRUSH","BUILD","BUILT","BUYER",
-    "CABIN","CABLE","CANDY","CARGO","CARRY","CATCH","CAUSE","CHAIN","CHAIR","CHARM","CHART","CHASE","CHEAP","CHECK","CHEER","CHEST","CHIEF","CHILD","CHILL","CHINA","CHOSE","CHUNK","CIVIL","CLAIM","CLASS","CLEAN","CLEAR","CLERK","CLICK","CLIFF","CLIMB","CLING","CLOCK","CLOSE","CLOTH","CLOUD","COACH","COAST","COLOR","COMET","COMIC","CORAL","COSTS","COUCH","COULD","COUNT","COURT","COVER","CRAFT","CRANE","CRASH","CRAZY","CREAM","CREEK","CRIME","CRISP","CROSS","CROWD","CROWN","CRUEL","CRUSH","CURVE","CYCLE",
-    "DAILY","DAIRY","DANCE","DATED","DEALS","DEATH","DEBUT","DECAY","DECOR","DELAY","DELTA","DENSE","DEPTH","DIARY","DIGIT","DIRTY","DISCO","DIVER","DOUBT","DOUGH","DOZEN","DRAFT","DRAIN","DRAMA","DRANK","DRAWN","DREAM","DRESS","DRIED","DRIFT","DRILL","DRINK","DRIVE","DRONE","DROVE","DRUNK","DUSTY","EAGER","EAGLE","EARLY","EARTH","EASEL","EATEN","EIGHT","ELBOW","ELDER","ELECT","ELITE","EMAIL","EMPTY","ENEMY","ENJOY","ENTER","ENTRY","EQUAL","ERROR","ESSAY","EVENT","EVERY","EXACT","EXAMS","EXCEL","EXIST","EXTRA",
-    "FABLE","FACED","FACTS","FAINT","FAITH","FALSE","FANCY","FATAL","FAULT","FAVOR","FEAST","FENCE","FEVER","FIBER","FIELD","FIFTH","FIFTY","FIGHT","FINAL","FINDS","FIRST","FIXED","FLAME","FLASH","FLEET","FLESH","FLOAT","FLOOD","FLOOR","FLOUR","FLUID","FOCUS","FORCE","FORMS","FORTH","FORTY","FORUM","FOUND","FRAME","FRANK","FRESH","FRIED","FRONT","FROST","FROWN","FRUIT","FULLY","FUNNY","GIANT","GIVEN","GLASS","GLOBE","GLORY","GOING","GRACE","GRADE","GRAIN","GRAND","GRANT","GRAPE","GRAPH","GRASP","GRASS","GRAVE","GREAT","GREEN","GREET","GRIEF","GRILL","GROSS","GROUP","GROVE","GROWN","GUARD","GUESS","GUEST","GUIDE","GUILD","HABIT","HAPPY","HARSH","HASTE","HEART","HEAVY","HEDGE","HELLO","HENCE","HORSE","HOTEL","HOUND","HOURS","HOUSE","HUMAN","HUMOR","HURRY","IDEAL","IMAGE","IMPLY","INDEX","INNER","INPUT","INTRO","IRON","ISSUE","IVORY",
-    "JEANS","JOINS","JOINT","JOKER","JUDGE","JUICE","KINDS","KNEEL","KNIFE","KNOCK","KNOWN","LABEL","LABOR","LARGER","LASER","LATER","LAUGH","LAYER","LEARN","LEASE","LEAST","LEAVE","LEGAL","LEMON","LEVEL","LIGHT","LIKED","LIMIT","LINED","LINEN","LIVER","LOANS","LOBBY","LOCAL","LODGE","LOGIC","LOOSE","LORRY","LOSER","LOVER","LOWER","LOYAL","LUCKY","LUNCH","LYRIC","MACRO","MAGIC","MAJOR","MAKER","MANGO","MANOR","MAPLE","MARCH","MARRY","MATCH","MAYBE","MAYOR","MEANS","MEDAL","MEDIA","MERCY","MERGE","MERIT","MERRY","METAL","METER","MIGHT","MINOR","MINUS","MIXED","MODEL","MODEM","MONEY","MONTH","MORAL","MOTOR","MOUNT","MOUSE","MOUTH","MOVED","MOVIE","MUSIC","NAIVE","NAKED","NAMED","NASTY","NAVAL","NEEDS","NERVE","NEVER","NEWER","NEWLY","NIGHT","NINTH","NOBLE","NOISE","NOISY","NORTH","NOTED","NOVEL","NURSE","OCCUR","OCEAN","OFFER","OFTEN","OLDER","OLIVE","ONION","ONSET","OPERA","ORBIT","ORDER","ORGAN","OTHER","OUGHT","OUNCE","OUTER","OWNED","OWNER","OXIDE","PAINT","PANEL","PANIC","PAPER","PARTY","PASTA","PASTE","PATCH","PAUSE","PEACE","PEACH","PEARL","PHASE","PHONE","PHOTO","PIANO","PIECE","PILOT","PITCH","PIXEL","PLACE","PLAIN","PLANE","PLANT","PLATE","PLAYS","PLAZA","PLEAD","PLUCK","POINT","PORCH","POUND","POWER","PRESS","PRICE","PRIDE","PRIME","PRINT","PRIOR","PRIZE","PROBE","PROOF","PROUD","PROVE","PROXY","PSALM","PULSE","PUNCH","PUPIL","PURSE","QUEEN","QUERY","QUEST","QUEUE","QUICK","QUIET","QUILT","QUITE","QUOTE",
-    "RADIO","RAISE","RALLY","RANGE","RAPID","RATES","RATIO","REACH","REACT","READY","REALM","REBEL","REFER","REIGN","RELAX","RELAY","RENEW","REPAY","REPLY","RIDER","RIDGE","RIGHT","RIGID","RIVER","ROBOT","ROCKY","ROGUE","ROMAN","ROOMS","ROUGH","ROUND","ROUTE","ROYAL","RUGBY","RULER","RUMOR","RURAL","SAFER","SAINT","SALAD","SALES","SALON","SANDY","SAUCE","SCALE","SCARE","SCENE","SCENT","SCORE","SCOUT","SCRAP","SENSE","SERVE","SETUP","SEVEN","SHADE","SHAKE","SHALL","SHAME","SHAPE","SHARE","SHARK","SHARP","SHEEP","SHEER","SHEET","SHELF","SHELL","SHIFT","SHINE","SHIRT","SHOCK","SHOOT","SHORE","SHORT","SHOUT","SHOWN","SIDED","SIGHT","SIGNS","SILLY","SINCE","SIXTH","SIXTY","SIZED","SKATE","SKILL","SKIRT","SKULL","SLATE","SLEEP","SLICE","SLIDE","SLOPE","SMALL","SMART","SMELL","SMILE","SMOKE","SNAKE","SNEAK","SOLAR","SOLID","SOLVE","SORRY","SOUND","SOUTH","SPACE","SPADE","SPARE","SPARK","SPEAK","SPEAR","SPEED","SPELL","SPEND","SPENT","SPICE","SPIKE","SPINE","SPLIT","SPOIL","SPOKE","SPOON","SPORT","SPRAY","SQUAD","STACK","STAFF","STAGE","STAIN","STAIR","STAKE","STALE","STAMP","STAND","STARE","STARK","START","STATE","STEAK","STEAL","STEAM","STEEL","STEEP","STEER","STICK","STIFF","STILL","STOCK","STONE","STOOD","STOOL","STORE","STORM","STORY","STOVE","STRAP","STRAW","STRAY","STRIP","STUCK","STUDY","STUFF","STYLE","SUGAR","SUITE","SUNNY","SUPER","SURGE","SWAMP","SWEAR","SWEAT","SWEEP","SWEET","SWELL","SWEPT","SWIFT","SWING","SWIPE","SWORD","TABLE","TAKEN","TALES","TASTE","TAXES","TEACH","TEAMS","TEASE","TEETH","TEMPO","TENSE","TERMS","THANK","THEFT","THEIR","THEME","THERE","THESE","THICK","THIEF","THING","THINK","THIRD","THOSE","THREE","THREW","THROW","THUMB","TIGER","TIGHT","TIMES","TIRED","TITLE","TODAY","TOKEN","TOOTH","TOPIC","TOTAL","TOUCH","TOUGH","TOWEL","TOWER","TOXIC","TRACE","TRACK","TRADE","TRAIL","TRAIN","TRAIT","TRASH","TREAT","TREND","TRIAL","TRIBE","TRICK","TRIED","TRIPS","TROLL","TROOP","TRUCK","TRULY","TRUNK","TRUST","TRUTH","TUTOR","TWICE","TWIST","TYPES","UNCLE","UNDER","UNIFY","UNION","UNITE","UNITY","UNTIL","UPPER","UPSET","URBAN","USAGE","USUAL","UTTER","VAGUE","VALID","VALUE","VALVE","VAPOR","VAULT","VENUE","VIDEO","VIVID","VOCAL","VOICE","VOTER","WAGES","WAGON","WAIST","WASTE","WATCH","WATER","WEARY","WEAVE","WEDGE","WEIGH","WEIRD","WHALE","WHEAT","WHEEL","WHERE","WHICH","WHILE","WHITE","WHOLE","WHOSE","WIDEN","WIDTH","WOMAN","WOMEN","WORLD","WORRY","WORSE","WORST","WORTH","WOULD","WOUND","WRIST","WRITE","WRONG","WROTE","YACHT","YEARS","YIELD","YOUNG","YOUTH","ZEBRA"
-  ];
+  var DICTIONARY = {};
+  var WORDS_BY_LENGTH = {};
+  var DICTIONARY_READY = false;
+  var DICTIONARY_META = {
+    source: "",
+    wordCount: 0,
+  };
 
-  var DICTIONARY = (function () {
-    var set = {};
-    for (var i = 0; i < BASE_WORDS.length; i++) {
-      set[BASE_WORDS[i]] = true;
+  function setDictionaryWords(words) {
+    DICTIONARY = {};
+    WORDS_BY_LENGTH = {};
+    var count = 0;
+    if (!Array.isArray(words)) {
+      DICTIONARY_READY = false;
+      DICTIONARY_META.wordCount = 0;
+      return 0;
     }
-    return set;
-  })();
+    for (var i = 0; i < words.length; i++) {
+      var w = normalizeWord(words[i]);
+      if (w.length < MIN_WORD_LEN || w.length > MAX_WORD_LEN) {
+        continue;
+      }
+      if (DICTIONARY[w]) {
+        continue;
+      }
+      DICTIONARY[w] = true;
+      if (!WORDS_BY_LENGTH[w.length]) {
+        WORDS_BY_LENGTH[w.length] = [];
+      }
+      WORDS_BY_LENGTH[w.length].push(w);
+      count++;
+    }
+    DICTIONARY_READY = count > 0;
+    DICTIONARY_META.wordCount = count;
+    return count;
+  }
+
+  function parseDictionaryText(text) {
+    var lines = String(text || "").split(/\r?\n/);
+    var words = [];
+    for (var i = 0; i < lines.length; i++) {
+      var w = normalizeWord(lines[i]);
+      if (w.length >= MIN_WORD_LEN && w.length <= MAX_WORD_LEN) {
+        words.push(w);
+      }
+    }
+    return words;
+  }
+
+  function loadDictionaryFromText(text, source) {
+    var n = setDictionaryWords(parseDictionaryText(text));
+    DICTIONARY_META.source = source || "custom";
+    clearPuzzleCache();
+    return n;
+  }
+
+  /** Sync load for Node smoke tests / tooling. No-op in the browser. */
+  function ensureDictionaryLoadedSync() {
+    if (DICTIONARY_READY) {
+      return true;
+    }
+    if (typeof require === "undefined") {
+      return false;
+    }
+    try {
+      var fs = require("fs");
+      var pathMod = require("path");
+      var file = pathMod.join(__dirname, "..", "data", "sumswipe-words.txt");
+      var text = fs.readFileSync(file, "utf8");
+      loadDictionaryFromText(text, "ENABLE (Public Domain)");
+      return DICTIONARY_READY;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function isDictionaryReady() {
+    return DICTIONARY_READY;
+  }
+
+  function getDictionaryMeta() {
+    return {
+      source: DICTIONARY_META.source,
+      wordCount: DICTIONARY_META.wordCount,
+      ready: DICTIONARY_READY,
+    };
+  }
 
   function isDictionaryWord(word) {
+    ensureDictionaryLoadedSync();
     var w = normalizeWord(word);
     if (w.length < MIN_WORD_LEN || w.length > MAX_WORD_LEN) {
       return false;
@@ -443,19 +474,6 @@ var SumSwipeUtils = (function () {
   function todayKey(now) {
     return formatDateKey(now || new Date());
   }
-
-  var WORDS_BY_LENGTH = (function () {
-    var byLen = {};
-    for (var i = 0; i < BASE_WORDS.length; i++) {
-      var w = BASE_WORDS[i];
-      var len = w.length;
-      if (!byLen[len]) {
-        byLen[len] = [];
-      }
-      byLen[len].push(w);
-    }
-    return byLen;
-  })();
 
   function shuffleInPlace(arr, rand) {
     for (var i = arr.length - 1; i > 0; i--) {
@@ -653,6 +671,9 @@ var SumSwipeUtils = (function () {
   }
 
   function generateGrid(dateKey, size) {
+    if (!ensureDictionaryLoadedSync() && !DICTIONARY_READY) {
+      throw new Error("SumSwipe: dictionary not loaded");
+    }
     size = size || GRID_SIZE;
     var cacheKey = dateKey + ":" + size;
     if (puzzleCache[cacheKey]) {
@@ -738,6 +759,7 @@ var SumSwipeUtils = (function () {
   }
 
   function findAllWords(grid, size) {
+    ensureDictionaryLoadedSync();
     var found = {};
     var neighbors = [];
     var i;
@@ -865,6 +887,10 @@ var SumSwipeUtils = (function () {
     pathToWord: pathToWord,
     flattenGrid: flattenGrid,
     isDictionaryWord: isDictionaryWord,
+    isDictionaryReady: isDictionaryReady,
+    getDictionaryMeta: getDictionaryMeta,
+    loadDictionaryFromText: loadDictionaryFromText,
+    ensureDictionaryLoadedSync: ensureDictionaryLoadedSync,
     resolvePathWord: resolvePathWord,
     mulberry32: mulberry32,
     hashDateKey: hashDateKey,
@@ -898,7 +924,7 @@ if (typeof module !== "undefined" && module.exports) {
   }
 
   var utils = SumSwipeUtils;
-  var storageKey = "sumswipe-daily-v5";
+  var storageKey = "sumswipe-daily-v6";
 
   var state = {
     dateKey: utils.todayKey(),
@@ -1781,5 +1807,29 @@ if (typeof module !== "undefined" && module.exports) {
     }, 100);
   });
 
-  loadDay(utils.todayKey());
+  function startGame() {
+    loadDay(utils.todayKey());
+  }
+
+  setStatus("Loading dictionary…");
+  fetch("/data/sumswipe-words.txt")
+    .then(function (res) {
+      if (!res.ok) {
+        throw new Error("HTTP " + res.status);
+      }
+      return res.text();
+    })
+    .then(function (text) {
+      var n = utils.loadDictionaryFromText(text, "ENABLE (Public Domain)");
+      if (!n) {
+        throw new Error("empty dictionary");
+      }
+      startGame();
+    })
+    .catch(function () {
+      setStatus(
+        "Could not load the word dictionary. Refresh and try again.",
+        "error"
+      );
+    });
 })();

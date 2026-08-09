@@ -99,7 +99,8 @@ hugo --gc --minify  # production-like build → public/
 - Front matter: `title`, `slug`, `date`, `short`, `draft`
 - Permalinks: `/game/:slug/`
 - Interactive UI can reuse tool shortcodes/JS/CSS (`static/css/tool.css` is already global)
-- Existing games: SumSwipe (`{{< sumSwipe >}}` — daily 5×5 fill-the-board word puzzle)
+- Existing games: SumSwipe (`{{< sumSwipe >}}` — daily 5×5 fill-the-board; ENABLE word list)
+- Word list: `static/data/sumswipe-words.txt` (ENABLE, public domain, lengths 3–8); rebuild with `node scripts/build-sumswipe-dict.js`
 - Games are navigable via the Games menu; they are not included in `mainSections` (home feed)
 - Old `/tool/sumswipe/` redirects to `/game/sumswipe/`
 
@@ -125,4 +126,5 @@ git submodule status        # theme should be checked out, not empty
 node scripts/smoke-svg-to-png.js       # SVG→PNG helper smoke tests
 node scripts/smoke-interest-return.js  # Interest Return calculator smoke tests
 node scripts/smoke-sumswipe.js         # SumSwipe puzzle helper smoke tests
+node scripts/build-sumswipe-dict.js    # rebuild ENABLE word list (optional)
 ```
