@@ -1772,11 +1772,10 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
 
-    // Starting a new selection elsewhere auto-submits a ready word first.
+    // Non-adjacent tap abandons the current path and starts a new one.
+    // Explicit submit is release-swipe, re-tap last letter, Enter, or rescue.
     if (action === "restart") {
-      if (pathIsReadyToSubmit()) {
-        tryCommitPath();
-      } else if (state.path.length) {
+      if (state.path.length) {
         clearPath();
       }
       clearTapMemory();

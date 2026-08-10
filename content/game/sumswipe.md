@@ -10,6 +10,6 @@ A new 5×5 letter grid every day. Drag or click through adjacent open letters to
 
 The word list is **ENABLE** (public domain), filtered to lengths 3–8.
 
-Drag or tap adjacent letters to build a word — a bubble at the path head shows the running score. Release a swipe or tap the last letter again to play it. Starting a new word elsewhere auto-submits if the current path is valid. Rescue controls (Submit / Clear / Reset) are only for stuck states. Keyboard: arrows, Space, Enter, Backspace, Esc. Browse previous days (up to a year back).
+Drag or tap adjacent letters to build a word — a bubble at the path head shows the running score. Release a swipe or tap the last letter again to play it. Tapping a non-adjacent letter clears the path and starts over. Rescue controls (Submit / Clear / Reset) are only for stuck states. Keyboard: arrows, Space, Enter, Backspace, Esc. Browse previous days (up to a year back).
 
 {{< sumSwipe >}}
