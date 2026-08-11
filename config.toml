@@ -54,7 +54,7 @@ url = "/contact/"
 title = "🌭Garry Polley"
 author = "Garry Polley"
 description = "I make computers go"
-profilePicture = "images/garry-and-child.JPG"
+profilePicture = "images/garry-portrait.jpg"
 customCss = ["css/recipe.css", "css/tool.css"]
 mainSections = ["post", "recipe"]
 
