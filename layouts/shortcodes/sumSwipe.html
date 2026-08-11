@@ -1,0 +1,100 @@
+<div class="tool sumswipe" id="sumSwipeTool">
+  <div class="ss-header">
+    <div class="ss-header-text">
+      <h3 id="ssTitle" class="ss-title">SumSwipe</h3>
+      <p id="ssBlurb" class="ss-blurb tool-hint"></p>
+    </div>
+    <p id="ssProgress" class="ss-progress" aria-live="polite"></p>
+  </div>
+
+  <div class="ss-layout">
+    <div class="ss-play">
+      <div class="ss-scoreboard" aria-live="polite">
+        <div class="ss-score-main">
+          <div class="ss-score-pair">
+            <span class="ss-live-label">Score</span>
+            <strong id="ssScoreValue" class="ss-score-value">0</strong>
+          </div>
+          <div class="ss-score-pair">
+            <span class="ss-live-label">Fill</span>
+            <strong id="ssFillValue" class="ss-score-value">0</strong>
+            <span class="ss-score-divider">/</span>
+            <span id="ssFillMax" class="ss-score-max">25</span>
+          </div>
+        </div>
+        <div class="ss-fill-bar" aria-hidden="true">
+          <div id="ssFillBar" class="ss-fill-fill" data-fill="0"></div>
+        </div>
+      </div>
+
+      <p id="ssPlayHint" class="ss-play-hint">
+        Drag or tap letters. Release a swipe or tap the last letter to play.
+      </p>
+      <p id="ssLiveEq" class="ss-visually-hidden" aria-live="polite"></p>
+
+      <div class="ss-board-wrap">
+        <div
+          id="ssGrid"
+          class="ss-grid"
+          role="group"
+          aria-label="SumSwipe letter grid"
+        ></div>
+        <svg id="ssPathSvg" class="ss-path-svg" aria-hidden="true"></svg>
+        <div id="ssPathBubble" class="ss-path-bubble" hidden aria-hidden="true"></div>
+      </div>
+
+      <p id="ssStatus" class="tool-status" role="status" aria-live="polite"></p>
+
+      <div class="tool-actions ss-actions">
+        <button type="button" id="ssPrev" class="tool-button--secondary">Previous day</button>
+        <button type="button" id="ssToday" class="tool-button--secondary">Today</button>
+        <button type="button" id="ssNext">Next day</button>
+      </div>
+
+      <details class="ss-rescue">
+        <summary>Stuck? Rescue controls</summary>
+        <div class="tool-actions ss-actions ss-actions-rescue">
+          <button type="button" id="ssSubmit" class="tool-button--secondary">Submit word</button>
+          <button type="button" id="ssClear" class="tool-button--secondary">Clear path</button>
+          <button type="button" id="ssResetPuzzle" class="tool-button--secondary">Reset day</button>
+        </div>
+      </details>
+    </div>
+
+    <aside class="ss-sidebar">
+      <h4 class="ss-sidebar-title">Fill mode</h4>
+      <p class="tool-hint">
+        Each word claims its cells permanently. Later words can only use open tiles.
+        Fill all 25 cells to finish the board and earn a +15% score bonus.
+        Words come from the ENABLE public-domain word list (lengths 3–8).
+      </p>
+
+      <h4 class="ss-sidebar-title">
+        Found
+        <span id="ssFoundCount" class="ss-found-count">0</span>
+      </h4>
+      <ul id="ssFoundList" class="ss-found-list"></ul>
+
+      <h4 class="ss-sidebar-title">History</h4>
+      <p class="tool-hint">Saved in this browser. Open a day to continue where you left off.</p>
+      <ul id="ssHistoryList" class="ss-history-list" aria-label="Played days"></ul>
+
+      <div class="ss-legend">
+        <p class="ss-legend-title">Rules</p>
+        <p class="tool-hint">
+          A=1…Z=26. Adjacent includes diagonals. No reusing a cell within one word
+          (classic Boggle). Sliding back to the previous cell undoes that step.
+          Claimed cells stay locked. Longer words score more via length factors
+          (4→×1.15, 5→×1.35, 6→×1.6, 7+→×1.9).
+          Drag or tap through open letters — a score bubble follows the path head.
+          Release a swipe to play; tap the last letter again to confirm a tapped word.
+          Tapping a non-adjacent letter clears the path and starts a new one.
+          Rescue controls (Submit / Clear / Reset) are only for stuck states.
+          Keyboard: arrows move, Space adds, Enter submits, Backspace undoes, Esc clears.
+        </p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="/js/sumswipe.js"></script>

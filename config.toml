@@ -10,6 +10,7 @@ pygmentsUseClasses = false  # Add inline styles, no need to compile extra CSS
   post = "/:year/:month/:day/:slug/"
   recipe = "/recipe/:slug/"
   tool = "/tool/:slug/"
+  game = "/game/:slug/"
 
 [menu]
 
@@ -38,6 +39,12 @@ identifier = "tool"
 url = "/tool/"
 
 [[menu.main]]
+name = "Games"
+weight = 360
+identifier = "game"
+url = "/game/"
+
+[[menu.main]]
 name = "Contact"
 weight = 400
 identifier = "contact"
@@ -47,7 +54,7 @@ url = "/contact/"
 title = "🌭Garry Polley"
 author = "Garry Polley"
 description = "I make computers go"
-profilePicture = "images/garry-and-child.JPG"
+profilePicture = "images/garry-portrait.jpg"
 customCss = ["css/recipe.css", "css/tool.css"]
 mainSections = ["post", "recipe"]
 

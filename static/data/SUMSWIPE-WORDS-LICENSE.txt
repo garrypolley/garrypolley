@@ -1,0 +1,10 @@
+SumSwipe word list
+==================
+
+Source: ENABLE (Enhanced North American Benchmark Lexicon) word list,
+via https://github.com/dolph/dictionary (enable1.txt).
+
+ENABLE / WORD.LST is released into the Public Domain by its authors.
+Anyone is free to use or distribute it. Please credit ENABLE as the source.
+
+This file retains only alphabetic words of length 3–8 for SumSwipe.

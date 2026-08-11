@@ -25,6 +25,18 @@ base = ""
   status = 200
   force = true
 
+[[redirects]]
+  from = "/tool/sumswipe"
+  to = "/game/sumswipe/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/tool/sumswipe/"
+  to = "/game/sumswipe/"
+  status = 301
+  force = true
+
 [context.deploy-preview]
 command = "hugo -D -b ${DEPLOY_PRIME_URL}/"
 

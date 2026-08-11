@@ -1,0 +1,10 @@
+{{ define "main" }}
+
+<p class="post">In-browser games. Everything runs locally in your browser.</p>
+
+<ul class="list-with-title">
+  {{ range .Pages }}
+    {{ .Render "li" }}
+  {{ end }}
+</ul>
+{{ end }}

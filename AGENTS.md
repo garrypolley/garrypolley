@@ -15,6 +15,22 @@ Personal Hugo site for Garry Polley. Live at https://garrypolley.com. Source: ht
 - No GitHub Actions / `.github` workflows — Netlify is CI/CD
 - Contact form is a **Netlify Forms** form (`data-netlify="true"` on `content/contact.html`)
 
+### Preview URLs (important)
+
+When sharing a Netlify deploy preview with the user:
+
+- Use **exactly** the URL Netlify reports — usually the `netlify/garrypolley/deploy-preview` status `target_url` on the PR. Example shape: `deploy-preview-<PR#>--garrypolley.netlify.app` (note the double hyphen).
+- Do **not** invent hosts, rewrite the subdomain, or append path segments (`/tool/...`, `/post/...`, etc.) when giving “the preview URL.”
+- Point people at that root preview link; they can use the site nav (Home / Posts / Recipes / Tools / Games / Contact) from there.
+- Production remains `https://garrypolley.com` after merge to `master`.
+
+**Chat / markdown link gotcha:** Netlify preview hostnames contain `--`. Many chat UIs and markdown linkifiers split or rewrite that, so the clickable link does not match the visible text. Avoid bare autolinked URLs. Prefer one of:
+
+- Inline code (best for copy-paste): `` `https://deploy-preview-6--garrypolley.netlify.app` ``
+- Angle brackets: `<https://deploy-preview-6--garrypolley.netlify.app>`
+
+Do not use markdown links whose label text is a different URL than the href.
+
 Redirects in `netlify.toml`:
 
 - `blog.garrypolley.com` → `/post/`
@@ -40,10 +56,11 @@ hugo --gc --minify  # production-like build → public/
 | `content/post/` | Blog posts (Markdown) |
 | `content/recipe/` | Recipes (Markdown + structured front matter) |
 | `content/tool/` | In-browser web tools (Markdown + shortcodes/JS) |
+| `content/game/` | In-browser games (Markdown + shortcodes/JS) |
 | `content/contact.html`, `thank-you.html` | Contact + form success (HTML content pages) |
-| `layouts/` | Theme overrides (recipe/tool templates + shortcodes) |
+| `layouts/` | Theme overrides (recipe/tool/game templates + shortcodes) |
 | `static/` | CSS, images, JS, favicon (copied as-is) |
-| `archetypes/` | `hugo new` templates for post/recipe/tool |
+| `archetypes/` | `hugo new` templates for post/recipe/tool/game |
 | `netlify.toml` | Build command, redirects, preview base URL |
 
 ## Content conventions
@@ -76,6 +93,17 @@ hugo --gc --minify  # production-like build → public/
 - Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`)
 - Tools are navigable via the Tools menu; they are not included in `mainSections` (home feed)
 
+### Games (`content/game/`)
+
+- Prefer `hugo new game/my-slug.md` (uses `archetypes/game.md`)
+- Front matter: `title`, `slug`, `date`, `short`, `draft`
+- Permalinks: `/game/:slug/`
+- Interactive UI can reuse tool shortcodes/JS/CSS (`static/css/tool.css` is already global)
+- Existing games: SumSwipe (`{{< sumSwipe >}}` — daily 5×5 fill-the-board; ENABLE word list)
+- Word list: `static/data/sumswipe-words.txt` (ENABLE, public domain, lengths 3–8); rebuild with `node scripts/build-sumswipe-dict.js`
+- Games are navigable via the Games menu; they are not included in `mainSections` (home feed)
+- Old `/tool/sumswipe/` redirects to `/game/sumswipe/`
+
 ### Contact
 
 - Keep Netlify form attributes (`name="contact"`, `data-netlify="true"`, honeypot) if editing the form
@@ -97,4 +125,6 @@ hugo server                 # spot-check post/recipe/contact locally
 git submodule status        # theme should be checked out, not empty
 node scripts/smoke-svg-to-png.js       # SVG→PNG helper smoke tests
 node scripts/smoke-interest-return.js  # Interest Return calculator smoke tests
+node scripts/smoke-sumswipe.js         # SumSwipe puzzle helper smoke tests
+node scripts/build-sumswipe-dict.js    # rebuild ENABLE word list (optional)
 ```
