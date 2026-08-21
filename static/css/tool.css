@@ -856,3 +856,7 @@
 .gif-slicer .gs-meta {
   margin-top: -0.35rem;
 }
+
+.gif-slicer .gs-fieldset[hidden] {
+  display: none !important;
+}

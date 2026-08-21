@@ -90,7 +90,7 @@ hugo --gc --minify  # production-like build → public/
 - Front matter: `title`, `slug`, `date`, `short`, `draft`
 - Permalinks: `/tool/:slug/`
 - Keep interactive UI in shortcodes and/or `static/js/` + `static/css/tool.css`
-- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`), GIF Slicer (`{{< gifSlicer >}}`)
+- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`), GIF Slicer (`{{< gifSlicer >}}` — GIF/video → sliced captioned GIF)
 - Tools are navigable via the Tools menu; they are not included in `mainSections` (home feed)
 
 ### Games (`content/game/`)

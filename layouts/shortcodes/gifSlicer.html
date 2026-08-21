@@ -1,21 +1,38 @@
 <div class="tool gif-slicer" id="gifSlicerTool">
   <div class="tool-field">
-    <label for="gsFile">Upload a GIF</label>
-    <input id="gsFile" type="file" accept=".gif,image/gif" />
+    <label for="gsFile">Upload a GIF or video</label>
+    <input
+      id="gsFile"
+      type="file"
+      accept=".gif,image/gif,video/*,.mp4,.webm,.mov,.m4v,.ogv,.ogg,.avi"
+    />
+    <p class="tool-hint">GIF, MP4, WebM, MOV, M4V, Ogg, and similar formats your browser can play.</p>
   </div>
 
   <div class="tool-field tool-field--inline gs-meta" id="gsMeta" hidden>
     <span class="tool-hint" id="gsMetaText"></span>
   </div>
 
+  <fieldset class="gs-fieldset" id="gsVideoFields" disabled hidden>
+    <legend>Video sampling</legend>
+    <div class="tool-field tool-field--inline">
+      <label for="gsFps">Frames per second</label>
+      <input id="gsFps" type="number" min="1" max="30" step="1" value="10" />
+      <span class="tool-hint">Used when extracting frames from video (max 30s / frame budget).</span>
+    </div>
+    <div class="tool-actions">
+      <button type="button" id="gsResample" disabled>Re-extract frames</button>
+    </div>
+  </fieldset>
+
   <fieldset class="gs-fieldset" id="gsSliceFields" disabled>
     <legend>Slice frames</legend>
     <div class="tool-field">
-      <label for="gsStartFrame">Start frame <span id="gsStartLabel">0</span></label>
+      <label for="gsStartFrame">Start frame <span id="gsStartLabel">1</span></label>
       <input id="gsStartFrame" type="range" min="0" max="0" value="0" step="1" />
     </div>
     <div class="tool-field">
-      <label for="gsEndFrame">End frame <span id="gsEndLabel">0</span></label>
+      <label for="gsEndFrame">End frame <span id="gsEndLabel">1</span></label>
       <input id="gsEndFrame" type="range" min="0" max="0" value="0" step="1" />
     </div>
     <p class="tool-hint" id="gsSliceHint">Select a contiguous frame range to keep.</p>
@@ -82,7 +99,7 @@
     <div>
       <h4>Preview</h4>
       <div id="gsPreview" class="tool-preview-box gs-preview-box">
-        <p class="tool-hint">Upload a GIF to preview the sliced result here.</p>
+        <p class="tool-hint">Upload a GIF or video to preview the sliced result here.</p>
       </div>
     </div>
   </div>

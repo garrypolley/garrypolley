@@ -1,13 +1,20 @@
 var GifSlicerUtils = (function () {
   "use strict";
 
-  var MAX_FRAMES = 500;
-  var MAX_PIXELS = 12 * 1024 * 1024;
+  var MAX_FRAMES = 300;
+  var MAX_PIXELS = 2 * 1024 * 1024; // per-frame width*height
+  var MAX_TOTAL_PIXELS = 24 * 1024 * 1024; // sum across stored frames
+  var MAX_FILE_BYTES = 80 * 1024 * 1024;
+  var MAX_VIDEO_DURATION_SEC = 30;
+  var MIN_FPS = 1;
+  var MAX_FPS = 30;
+  var DEFAULT_FPS = 10;
   var MIN_FONT_SIZE = 8;
   var MAX_FONT_SIZE = 200;
   var MIN_STROKE = 0;
   var MAX_STROKE = 20;
 
+  var VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "m4v", "ogv", "ogg", "avi", "mkv", "mpeg", "mpg", "3gp"];
   var FONTS = [
     "Impact, Haettenschweiler, sans-serif",
     "'Arial Black', 'Helvetica Bold', sans-serif",
@@ -40,6 +47,116 @@ var GifSlicerUtils = (function () {
 
   function clampStrokeWidth(value) {
     return clamp(value, MIN_STROKE, MAX_STROKE, 3);
+  }
+
+  function clampFps(value) {
+    return Math.round(clamp(value, MIN_FPS, MAX_FPS, DEFAULT_FPS));
+  }
+
+  function fileExtension(name) {
+    var text = String(name || "");
+    var dot = text.lastIndexOf(".");
+    if (dot < 0) {
+      return "";
+    }
+    return text.slice(dot + 1).toLowerCase();
+  }
+
+  function isGifFile(file) {
+    if (!file) {
+      return false;
+    }
+    if (file.type === "image/gif") {
+      return true;
+    }
+    return fileExtension(file.name) === "gif";
+  }
+
+  function isVideoFile(file) {
+    if (!file) {
+      return false;
+    }
+    if (file.type && file.type.indexOf("video/") === 0) {
+      return true;
+    }
+    return VIDEO_EXTENSIONS.indexOf(fileExtension(file.name)) !== -1;
+  }
+
+  function assertFileSize(file) {
+    if (file && typeof file.size === "number" && file.size > MAX_FILE_BYTES) {
+      throw new Error(
+        "File is too large (max " + Math.round(MAX_FILE_BYTES / (1024 * 1024)) + " MB)."
+      );
+    }
+  }
+
+  function scaledSize(width, height, maxPixels) {
+    var w = Math.max(1, Math.floor(width));
+    var h = Math.max(1, Math.floor(height));
+    var pixels = w * h;
+    if (pixels <= maxPixels) {
+      return { width: w, height: h, scale: 1 };
+    }
+    var scale = Math.sqrt(maxPixels / pixels);
+    w = Math.max(1, Math.floor(w * scale));
+    h = Math.max(1, Math.floor(h * scale));
+    return { width: w, height: h, scale: scale };
+  }
+
+  function assertFrameBudget(width, height, frameCount) {
+    var count = Math.max(0, Math.floor(frameCount || 0));
+    var pixels = Math.max(0, Math.floor(width || 0)) * Math.max(0, Math.floor(height || 0));
+    if (pixels > MAX_PIXELS) {
+      throw new Error("Frames are too large to process in the browser.");
+    }
+    if (count > MAX_FRAMES) {
+      throw new Error("Too many frames (max " + MAX_FRAMES + ").");
+    }
+    if (pixels * count > MAX_TOTAL_PIXELS) {
+      throw new Error(
+        "That media would use too much memory. Try a shorter clip, lower FPS, or a smaller file."
+      );
+    }
+  }
+
+  function planVideoCapture(input) {
+    var opts = input || {};
+    var durationSec = Number(opts.durationSec);
+    if (!isFinite(durationSec) || durationSec <= 0) {
+      throw new Error("Video has no readable duration.");
+    }
+    var fps = clampFps(opts.fps);
+    var maxDuration = clamp(opts.maxDurationSec, 0.1, MAX_VIDEO_DURATION_SEC, MAX_VIDEO_DURATION_SEC);
+    var captureDuration = Math.min(durationSec, maxDuration);
+    var videoWidth = Math.max(1, Math.floor(Number(opts.videoWidth) || 1));
+    var videoHeight = Math.max(1, Math.floor(Number(opts.videoHeight) || 1));
+    var sized = scaledSize(videoWidth, videoHeight, MAX_PIXELS);
+    var maxByMemory = Math.max(1, Math.floor(MAX_TOTAL_PIXELS / (sized.width * sized.height)));
+    var maxFrames = Math.min(MAX_FRAMES, maxByMemory, Math.max(1, Math.floor(Number(opts.maxFrames) || MAX_FRAMES)));
+    var idealCount = Math.max(1, Math.floor(captureDuration * fps));
+    var frameCount = Math.min(maxFrames, idealCount);
+    // Recalculate effective span so frames are evenly spaced.
+    var span = frameCount <= 1 ? 0 : Math.min(captureDuration, (frameCount - 1) / fps);
+    var times = [];
+    var i;
+    for (i = 0; i < frameCount; i++) {
+      var t = frameCount === 1 ? 0 : (span * i) / (frameCount - 1);
+      // Stay slightly before EOF — some browsers fail seeking to exact duration.
+      times.push(Math.min(Math.max(0, t), Math.max(0, durationSec - 0.001)));
+    }
+    var delayCs = Math.max(1, Math.round(100 / fps));
+    return {
+      fps: fps,
+      width: sized.width,
+      height: sized.height,
+      sourceWidth: videoWidth,
+      sourceHeight: videoHeight,
+      frameCount: frameCount,
+      times: times,
+      delayCs: delayCs,
+      captureDuration: captureDuration,
+      truncated: captureDuration < durationSec || frameCount < idealCount
+    };
   }
 
   function clampFrameRange(start, end, frameCount) {
@@ -264,6 +381,9 @@ var GifSlicerUtils = (function () {
   }
 
   function lzwDecode(minCodeSize, data) {
+    if (!(minCodeSize >= 2 && minCodeSize <= 8)) {
+      throw new Error("Invalid GIF LZW code size.");
+    }
     var clearCode = 1 << minCodeSize;
     var eoiCode = clearCode + 1;
     var codeSize = minCodeSize + 1;
@@ -280,7 +400,7 @@ var GifSlicerUtils = (function () {
     function readCode() {
       var code = 0;
       for (var b = 0; b < codeSize; b++) {
-        var byteIndex = (bitPos >> 3);
+        var byteIndex = bitPos >> 3;
         if (byteIndex >= data.length) {
           return eoiCode;
         }
@@ -413,7 +533,7 @@ var GifSlicerUtils = (function () {
           // Browsers treat delay 0 as ~100ms (10cs).
           gce.delay = delay === 0 ? 10 : delay;
           var trans = reader.readByte();
-          gce.transparentIndex = (gcePacked & 0x01) ? trans : -1;
+          gce.transparentIndex = gcePacked & 0x01 ? trans : -1;
           reader.readByte(); // terminator
         } else if (label === 0xff) {
           var appLen = reader.readByte();
@@ -480,11 +600,13 @@ var GifSlicerUtils = (function () {
       }
 
       var indices = lzwDecode(minCodeSize, lzwData);
+      if (indices.length < fw * fh) {
+        throw new Error("GIF frame data is truncated.");
+      }
       if (interlaced) {
         indices = deinterlace(indices, fw, fh);
       }
 
-      // Save pre-draw canvas for disposal method 3 (restore to previous).
       previous.set(canvas);
 
       var transparent = gce.transparentIndex;
@@ -516,7 +638,8 @@ var GifSlicerUtils = (function () {
         pixels: new Uint8ClampedArray(canvas)
       });
 
-      // Apply disposal to prepare the canvas for the next frame.
+      assertFrameBudget(width, height, frames.length);
+
       if (gce.disposal === 2) {
         for (var cy = 0; cy < fh; cy++) {
           for (var cx = 0; cx < fw; cx++) {
@@ -547,6 +670,7 @@ var GifSlicerUtils = (function () {
       width: width,
       height: height,
       loopCount: loopCount,
+      sourceType: "gif",
       frames: frames
     };
   }
@@ -557,12 +681,11 @@ var GifSlicerUtils = (function () {
       width: parsed.width,
       height: parsed.height,
       loopCount: parsed.loopCount,
+      sourceType: parsed.sourceType || "gif",
       frames: parsed.frames.slice(range.start, range.end + 1),
       range: range
     };
   }
-
-  // ---- GIF encode (palette + LZW) ----
 
   function colorDistance(a, b) {
     var dr = a[0] - b[0];
@@ -621,10 +744,16 @@ var GifSlicerUtils = (function () {
     return palette;
   }
 
-  function nearestColorIndex(palette, r, g, b) {
-    var best = 0;
+  function nearestColorIndex(palette, r, g, b, skipIndex) {
+    var best = skipIndex === 0 ? 1 : 0;
+    if (best >= palette.length) {
+      best = 0;
+    }
     var bestDist = Infinity;
     for (var i = 0; i < palette.length; i++) {
+      if (i === skipIndex) {
+        continue;
+      }
       var c = palette[i];
       var d = colorDistance(c, [r, g, b]);
       if (d < bestDist) {
@@ -635,13 +764,13 @@ var GifSlicerUtils = (function () {
     return best;
   }
 
-  function indexFrame(pixels, width, height, palette) {
+  function indexFrame(pixels, width, height, palette, transparentIndex) {
     var indices = new Uint8Array(width * height);
     for (var i = 0, p = 0; i < indices.length; i++, p += 4) {
-      if (pixels[p + 3] < 128) {
-        indices[i] = 0;
+      if (transparentIndex >= 0 && pixels[p + 3] < 128) {
+        indices[i] = transparentIndex;
       } else {
-        indices[i] = nearestColorIndex(palette, pixels[p], pixels[p + 1], pixels[p + 2]);
+        indices[i] = nearestColorIndex(palette, pixels[p], pixels[p + 1], pixels[p + 2], transparentIndex);
       }
     }
     return indices;
@@ -697,8 +826,6 @@ var GifSlicerUtils = (function () {
       } else {
         writeCode(dict[w]);
         if (nextCode < 4096) {
-          // Bump width before creating the first code that needs the extra bit
-          // (must stay in lockstep with the decoder).
           if (nextCode >= 1 << codeSize && codeSize < 12) {
             codeSize++;
           }
@@ -765,12 +892,36 @@ var GifSlicerUtils = (function () {
       });
     }
 
-    var palette = buildPalette(rendered, 256);
-    var bits = paletteSizeBits(palette.length);
-    var tableSize = 1 << bits;
-    while (palette.length < tableSize) {
-      palette.push([0, 0, 0]);
+    var palette = buildPalette(rendered, 255);
+    // Reserve index 0 for transparency when needed.
+    var hasTransparency = false;
+    var r;
+    var p;
+    for (r = 0; r < rendered.length && !hasTransparency; r++) {
+      var pix = rendered[r].pixels;
+      for (p = 3; p < pix.length; p += 4) {
+        if (pix[p] < 128) {
+          hasTransparency = true;
+          break;
+        }
+      }
     }
+
+    var workingPalette = palette.slice();
+    if (hasTransparency) {
+      workingPalette.unshift([0, 0, 0]);
+      if (workingPalette.length > 256) {
+        workingPalette = workingPalette.slice(0, 256);
+      }
+    }
+
+    var bits = paletteSizeBits(workingPalette.length);
+    var tableSize = 1 << bits;
+    while (workingPalette.length < tableSize) {
+      workingPalette.push([0, 0, 0]);
+    }
+
+    var transparentIndex = hasTransparency ? 0 : -1;
 
     var out = [];
     function pushString(s) {
@@ -786,29 +937,33 @@ var GifSlicerUtils = (function () {
     pushString("GIF89a");
     pushU16(width);
     pushU16(height);
-    out.push(0x80 | ((bits - 1) & 0x07)); // GCT flag + size
-    out.push(0); // background
-    out.push(0); // aspect
+    out.push(0x80 | ((bits - 1) & 0x07));
+    out.push(0);
+    out.push(0);
     for (var c = 0; c < tableSize; c++) {
-      out.push(palette[c][0]);
-      out.push(palette[c][1]);
-      out.push(palette[c][2]);
+      out.push(workingPalette[c][0]);
+      out.push(workingPalette[c][1]);
+      out.push(workingPalette[c][2]);
     }
 
-    // Netscape loop
     out.push(0x21, 0xff, 0x0b);
     pushString("NETSCAPE2.0");
     out.push(0x03, 0x01);
-    pushU16(0); // loop forever
+    pushU16(0);
     out.push(0x00);
 
     var minCodeSize = bits < 2 ? 2 : bits;
     for (var f = 0; f < rendered.length; f++) {
       var frame = rendered[f];
       out.push(0x21, 0xf9, 0x04);
-      out.push(0x08); // disposal 1 (do not dispose)
+      // Disposal 1 (do not dispose) lives in bits 2-4 → 0x04; transparent flag → 0x01.
+      var packedGce = 0x04;
+      if (hasTransparency) {
+        packedGce |= 0x01;
+      }
+      out.push(packedGce);
       pushU16(frame.delayCs);
-      out.push(0x00); // no transparent
+      out.push(hasTransparency ? transparentIndex : 0);
       out.push(0x00);
 
       out.push(0x2c);
@@ -816,9 +971,9 @@ var GifSlicerUtils = (function () {
       pushU16(0);
       pushU16(width);
       pushU16(height);
-      out.push(0x00); // no LCT
+      out.push(0x00);
 
-      var indices = indexFrame(frame.pixels, width, height, palette);
+      var indices = indexFrame(frame.pixels, width, height, workingPalette, transparentIndex);
       var compressed = lzwEncode(minCodeSize, indices);
       out.push(minCodeSize);
       writeBlocks(out, compressed);
@@ -828,22 +983,31 @@ var GifSlicerUtils = (function () {
     return new Uint8Array(out);
   }
 
-  function renderOverlayOntoPixels(pixels, width, height, style, canvasFactory) {
+  function renderOverlayOntoPixels(pixels, width, height, style, canvasFactory, reusable) {
     if (!style || !String(style.text || "").trim()) {
       return pixels;
     }
-    if (typeof document === "undefined" && !canvasFactory) {
+    if (typeof document === "undefined" && !canvasFactory && !(reusable && reusable.canvas)) {
       return pixels;
     }
     var canvas;
-    if (canvasFactory) {
+    var ctx;
+    if (reusable && reusable.canvas && reusable.ctx) {
+      canvas = reusable.canvas;
+      ctx = reusable.ctx;
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+    } else if (canvasFactory) {
       canvas = canvasFactory(width, height);
+      ctx = canvas.getContext("2d");
     } else {
       canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
+      ctx = canvas.getContext("2d");
     }
-    var ctx = canvas.getContext("2d");
     var imageData = ctx.createImageData(width, height);
     imageData.data.set(pixels);
     ctx.putImageData(imageData, 0, 0);
@@ -856,7 +1020,6 @@ var GifSlicerUtils = (function () {
   }
 
   function delayMs(delayCs) {
-    // GIF delay is in hundredths of a second; browsers treat 0 as ~100ms.
     var cs = Math.max(1, delayCs || 10);
     return cs * 10;
   }
@@ -864,13 +1027,28 @@ var GifSlicerUtils = (function () {
   return {
     MAX_FRAMES: MAX_FRAMES,
     MAX_PIXELS: MAX_PIXELS,
+    MAX_TOTAL_PIXELS: MAX_TOTAL_PIXELS,
+    MAX_FILE_BYTES: MAX_FILE_BYTES,
+    MAX_VIDEO_DURATION_SEC: MAX_VIDEO_DURATION_SEC,
+    MIN_FPS: MIN_FPS,
+    MAX_FPS: MAX_FPS,
+    DEFAULT_FPS: DEFAULT_FPS,
     MIN_FONT_SIZE: MIN_FONT_SIZE,
     MAX_FONT_SIZE: MAX_FONT_SIZE,
+    VIDEO_EXTENSIONS: VIDEO_EXTENSIONS,
     FONTS: FONTS,
     clamp: clamp,
     clampFontSize: clampFontSize,
     clampStrokeWidth: clampStrokeWidth,
+    clampFps: clampFps,
     clampFrameRange: clampFrameRange,
+    fileExtension: fileExtension,
+    isGifFile: isGifFile,
+    isVideoFile: isVideoFile,
+    assertFileSize: assertFileSize,
+    assertFrameBudget: assertFrameBudget,
+    scaledSize: scaledSize,
+    planVideoCapture: planVideoCapture,
     normalizeTextStyle: normalizeTextStyle,
     normalizeColor: normalizeColor,
     buildFontCss: buildFontCss,
@@ -905,6 +1083,9 @@ if (typeof module !== "undefined" && module.exports) {
   var fileInput = document.getElementById("gsFile");
   var meta = document.getElementById("gsMeta");
   var metaText = document.getElementById("gsMetaText");
+  var videoFields = document.getElementById("gsVideoFields");
+  var fpsInput = document.getElementById("gsFps");
+  var resampleButton = document.getElementById("gsResample");
   var sliceFields = document.getElementById("gsSliceFields");
   var textFields = document.getElementById("gsTextFields");
   var startInput = document.getElementById("gsStartFrame");
@@ -928,11 +1109,18 @@ if (typeof module !== "undefined" && module.exports) {
   var preview = document.getElementById("gsPreview");
 
   var parsed = null;
+  var sourceFile = null;
+  var sourceKind = null; // "gif" | "video"
   var fileName = "gif";
+  var objectUrl = null;
   var playTimer = null;
   var playIndex = 0;
+  var displayIndex = 0;
   var previewCanvas = null;
   var previewCtx = null;
+  var overlayCanvas = null;
+  var overlayCtx = null;
+  var busy = false;
 
   function setStatus(message, isError) {
     statusEl.textContent = message || "";
@@ -940,6 +1128,13 @@ if (typeof module !== "undefined" && module.exports) {
       statusEl.classList.add("is-error");
     } else {
       statusEl.classList.remove("is-error");
+    }
+  }
+
+  function revokeObjectUrl() {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
     }
   }
 
@@ -987,7 +1182,7 @@ if (typeof module !== "undefined" && module.exports) {
     }
   }
 
-  function drawFrame(frame) {
+  function drawFrame(frame, index) {
     if (!parsed || !frame) {
       return;
     }
@@ -996,6 +1191,9 @@ if (typeof module !== "undefined" && module.exports) {
     imageData.data.set(frame.pixels);
     previewCtx.putImageData(imageData, 0, 0);
     U.drawTextOverlay(previewCtx, parsed.width, parsed.height, currentStyle());
+    if (typeof index === "number") {
+      displayIndex = index;
+    }
   }
 
   function scheduleNext() {
@@ -1011,7 +1209,7 @@ if (typeof module !== "undefined" && module.exports) {
       playIndex = range.start;
     }
     var frame = parsed.frames[playIndex];
-    drawFrame(frame);
+    drawFrame(frame, playIndex);
     var next = playIndex + 1;
     if (next > range.end) {
       next = range.start;
@@ -1035,7 +1233,6 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
     var range = currentRange();
-    // Keep inputs consistent if start > end was swapped conceptually
     if (Number(startInput.value) !== range.start) {
       startInput.value = String(range.start);
     }
@@ -1058,18 +1255,52 @@ if (typeof module !== "undefined" && module.exports) {
       ").";
   }
 
-  function syncControlsEnabled(enabled) {
+  function syncControlsEnabled(enabled, kind) {
     sliceFields.disabled = !enabled;
     textFields.disabled = !enabled;
-    exportButton.disabled = !enabled;
+    exportButton.disabled = !enabled || busy;
     meta.hidden = !enabled;
+    var showVideo = enabled && kind === "video";
+    videoFields.hidden = !showVideo;
+    videoFields.disabled = !showVideo || busy;
+    resampleButton.disabled = !showVideo || busy;
+  }
+
+  function applyParsed(nextParsed, kind, name, statusMessage) {
+    parsed = nextParsed;
+    sourceKind = kind;
+    fileName = name;
+    startInput.min = "0";
+    endInput.min = "0";
+    startInput.max = String(parsed.frames.length - 1);
+    endInput.max = String(parsed.frames.length - 1);
+    startInput.value = "0";
+    endInput.value = String(parsed.frames.length - 1);
+    metaText.textContent =
+      (kind === "video" ? "Video → GIF · " : "GIF · ") +
+      parsed.width +
+      "×" +
+      parsed.height +
+      " · " +
+      parsed.frames.length +
+      " frame" +
+      (parsed.frames.length === 1 ? "" : "s");
+    syncControlsEnabled(true, kind);
+    updateSliceLabels();
+    restartPreview();
+    setStatus(statusMessage || "");
   }
 
   function clearAll() {
     stopPlayback();
+    revokeObjectUrl();
     parsed = null;
+    sourceFile = null;
+    sourceKind = null;
     fileName = "gif";
+    busy = false;
     fileInput.value = "";
+    fpsInput.value = String(U.DEFAULT_FPS);
     startInput.value = "0";
     endInput.value = "0";
     startInput.max = "0";
@@ -1084,10 +1315,11 @@ if (typeof module !== "undefined" && module.exports) {
     strokeWidthInput.value = "3";
     positionSelect.value = "top";
     alignSelect.value = "center";
-    preview.innerHTML = '<p class="tool-hint">Upload a GIF to preview the sliced result here.</p>';
+    preview.innerHTML =
+      '<p class="tool-hint">Upload a GIF or video to preview the sliced result here.</p>';
     previewCanvas = null;
     previewCtx = null;
-    syncControlsEnabled(false);
+    syncControlsEnabled(false, null);
     setStatus("");
   }
 
@@ -1112,50 +1344,227 @@ if (typeof module !== "undefined" && module.exports) {
     if (!parsed) {
       return;
     }
-    // Redraw current frame immediately with new style; playback continues.
     var range = currentRange();
-    var idx = playIndex - 1;
+    var idx = displayIndex;
     if (idx < range.start || idx > range.end) {
       idx = range.start;
     }
-    drawFrame(parsed.frames[idx]);
+    drawFrame(parsed.frames[idx], idx);
   }
 
-  function loadGif(file) {
-    stopPlayback();
-    setStatus("Reading GIF…");
-    var reader = new FileReader();
-    reader.onload = function () {
+  function loadGifArrayBuffer(buffer, file) {
+    var next = U.parseGif(buffer);
+    var base = (file.name || "gif").replace(/\.gif$/i, "") || "gif";
+    applyParsed(next, "gif", base, "Loaded " + (file.name || "GIF") + ". Adjust the slice and text, then export.");
+  }
+
+  function extractFramesFromVideoElement(video, plan, onProgress, done) {
+    var canvas = document.createElement("canvas");
+    canvas.width = plan.width;
+    canvas.height = plan.height;
+    var ctx = canvas.getContext("2d");
+    var frames = [];
+    var i = 0;
+
+    function fail(err) {
+      done(err || new Error("Could not read video frames."));
+    }
+
+    function captureAt(index) {
+      if (index >= plan.times.length) {
+        done(null, {
+          width: plan.width,
+          height: plan.height,
+          loopCount: 0,
+          sourceType: "video",
+          frames: frames
+        });
+        return;
+      }
+
+      var target = plan.times[index];
+      var settled = false;
+
+      function finishSeek() {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        video.removeEventListener("seeked", onSeeked);
+        try {
+          ctx.drawImage(video, 0, 0, plan.width, plan.height);
+          var imageData = ctx.getImageData(0, 0, plan.width, plan.height);
+          frames.push({
+            delayCs: plan.delayCs,
+            disposal: 1,
+            left: 0,
+            top: 0,
+            width: plan.width,
+            height: plan.height,
+            pixels: new Uint8ClampedArray(imageData.data)
+          });
+          if (onProgress) {
+            onProgress(index + 1, plan.times.length);
+          }
+          captureAt(index + 1);
+        } catch (err) {
+          fail(err);
+        }
+      }
+
+      function onSeeked() {
+        finishSeek();
+      }
+
+      video.addEventListener("seeked", onSeeked);
       try {
-        parsed = U.parseGif(reader.result);
-        fileName = (file.name || "gif").replace(/\.gif$/i, "") || "gif";
-        startInput.min = "0";
-        endInput.min = "0";
-        startInput.max = String(parsed.frames.length - 1);
-        endInput.max = String(parsed.frames.length - 1);
-        startInput.value = "0";
-        endInput.value = String(parsed.frames.length - 1);
-        metaText.textContent =
-          parsed.width +
-          "×" +
-          parsed.height +
-          " · " +
-          parsed.frames.length +
-          " frame" +
-          (parsed.frames.length === 1 ? "" : "s");
-        syncControlsEnabled(true);
-        updateSliceLabels();
-        restartPreview();
-        setStatus("Loaded " + (file.name || "GIF") + ". Adjust the slice and text, then export.");
+        // If already very close, still assign to force a seeked in most browsers.
+        video.currentTime = target;
       } catch (err) {
-        clearAll();
-        setStatus((err && err.message) || "Could not parse that GIF.", true);
+        video.removeEventListener("seeked", onSeeked);
+        fail(err);
+        return;
+      }
+
+      // Fallback if seeked never fires (already at time).
+      setTimeout(function () {
+        if (!settled && Math.abs(video.currentTime - target) < 0.05) {
+          finishSeek();
+        }
+      }, 250);
+    }
+
+    captureAt(0);
+  }
+
+  function loadVideoFile(file, fps) {
+    busy = true;
+    syncControlsEnabled(!!parsed, "video");
+    setStatus("Loading video…");
+    revokeObjectUrl();
+    objectUrl = URL.createObjectURL(file);
+
+    var video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.setAttribute("crossorigin", "anonymous");
+
+    var cleanedUp = false;
+    function cleanupVideo() {
+      if (cleanedUp) {
+        return;
+      }
+      cleanedUp = true;
+      video.removeAttribute("src");
+      video.load();
+    }
+
+    function fail(err) {
+      busy = false;
+      cleanupVideo();
+      syncControlsEnabled(!!parsed, sourceKind);
+      setStatus((err && err.message) || "Could not read that video.", true);
+    }
+
+    video.onerror = function () {
+      fail(new Error("Browser could not decode that video. Try MP4 (H.264) or WebM."));
+    };
+
+    video.onloadedmetadata = function () {
+      try {
+        if (!video.videoWidth || !video.videoHeight) {
+          throw new Error("Video has no visual frames.");
+        }
+        var plan = U.planVideoCapture({
+          durationSec: video.duration,
+          fps: fps,
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight
+        });
+        U.assertFrameBudget(plan.width, plan.height, plan.frameCount);
+        setStatus("Extracting frames 0/" + plan.frameCount + "…");
+
+        extractFramesFromVideoElement(
+          video,
+          plan,
+          function (doneCount, total) {
+            setStatus("Extracting frames " + doneCount + "/" + total + "…");
+          },
+          function (err, result) {
+            busy = false;
+            cleanupVideo();
+            if (err) {
+              fail(err);
+              return;
+            }
+            try {
+              U.assertFrameBudget(result.width, result.height, result.frames.length);
+              var base =
+                (file.name || "video").replace(/\.(mp4|webm|mov|m4v|ogv|ogg|avi|mkv|mpeg|mpg|3gp)$/i, "") ||
+                "video";
+              var note = plan.truncated
+                ? " Sampled first ~" +
+                  Math.round(plan.captureDuration) +
+                  "s at " +
+                  plan.fps +
+                  " fps."
+                : " Sampled at " + plan.fps + " fps.";
+              applyParsed(
+                result,
+                "video",
+                base,
+                "Loaded " + (file.name || "video") + "." + note + " Adjust the slice and text, then export."
+              );
+            } catch (applyErr) {
+              fail(applyErr);
+            }
+          }
+        );
+      } catch (err) {
+        fail(err);
       }
     };
-    reader.onerror = function () {
-      setStatus("Could not read that file.", true);
-    };
-    reader.readAsArrayBuffer(file);
+
+    video.src = objectUrl;
+  }
+
+  function loadSelectedFile(file) {
+    try {
+      U.assertFileSize(file);
+    } catch (err) {
+      setStatus(err.message, true);
+      return;
+    }
+
+    sourceFile = file;
+    stopPlayback();
+
+    if (U.isGifFile(file)) {
+      videoFields.hidden = true;
+      setStatus("Reading GIF…");
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          loadGifArrayBuffer(reader.result, file);
+        } catch (err) {
+          clearAll();
+          setStatus((err && err.message) || "Could not parse that GIF.", true);
+        }
+      };
+      reader.onerror = function () {
+        setStatus("Could not read that file.", true);
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    if (U.isVideoFile(file)) {
+      loadVideoFile(file, U.clampFps(fpsInput.value));
+      return;
+    }
+
+    setStatus("Please choose a GIF or a common video file (MP4, WebM, MOV, …).", true);
   }
 
   fileInput.addEventListener("change", function () {
@@ -1163,11 +1572,14 @@ if (typeof module !== "undefined" && module.exports) {
     if (!file) {
       return;
     }
-    if (file.type && file.type !== "image/gif" && !/\.gif$/i.test(file.name || "")) {
-      setStatus("Please choose a .gif file.", true);
+    loadSelectedFile(file);
+  });
+
+  resampleButton.addEventListener("click", function () {
+    if (!sourceFile || sourceKind !== "video" || busy) {
       return;
     }
-    loadGif(file);
+    loadVideoFile(sourceFile, U.clampFps(fpsInput.value));
   });
 
   startInput.addEventListener("input", onRangeChange);
@@ -1190,7 +1602,7 @@ if (typeof module !== "undefined" && module.exports) {
   });
 
   exportButton.addEventListener("click", function () {
-    if (!parsed) {
+    if (!parsed || busy) {
       return;
     }
     try {
@@ -1199,9 +1611,14 @@ if (typeof module !== "undefined" && module.exports) {
       var range = currentRange();
       var sliced = U.sliceFrames(parsed, range.start, range.end);
       var style = currentStyle();
+      if (!overlayCanvas) {
+        overlayCanvas = document.createElement("canvas");
+        overlayCtx = overlayCanvas.getContext("2d");
+      }
+      var reusable = { canvas: overlayCanvas, ctx: overlayCtx };
       var bytes = U.encodeGif(sliced, {
         renderOverlay: function (pixels, width, height) {
-          U.renderOverlayOntoPixels(pixels, width, height, style);
+          U.renderOverlayOntoPixels(pixels, width, height, style, null, reusable);
         }
       });
       var blob = new Blob([bytes], { type: "image/gif" });
@@ -1227,7 +1644,7 @@ if (typeof module !== "undefined" && module.exports) {
     } catch (err) {
       setStatus((err && err.message) || "Export failed.", true);
     } finally {
-      exportButton.disabled = !parsed;
+      exportButton.disabled = !parsed || busy;
     }
   });
 

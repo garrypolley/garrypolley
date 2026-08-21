@@ -50,6 +50,50 @@ check("buildFontCss includes weight and style", function () {
   assert.ok(/24px/.test(css));
 });
 
+check("isGifFile and isVideoFile detect common types", function () {
+  assert.strictEqual(utils.isGifFile({ name: "a.GIF", type: "" }), true);
+  assert.strictEqual(utils.isGifFile({ name: "a.png", type: "image/gif" }), true);
+  assert.strictEqual(utils.isVideoFile({ name: "clip.mp4", type: "" }), true);
+  assert.strictEqual(utils.isVideoFile({ name: "clip", type: "video/webm" }), true);
+  assert.strictEqual(utils.isVideoFile({ name: "photo.jpg", type: "image/jpeg" }), false);
+  assert.strictEqual(utils.isGifFile({ name: "clip.mp4", type: "video/mp4" }), false);
+});
+
+check("planVideoCapture respects fps, duration, and memory", function () {
+  var plan = utils.planVideoCapture({
+    durationSec: 2,
+    fps: 10,
+    videoWidth: 320,
+    videoHeight: 180
+  });
+  assert.strictEqual(plan.fps, 10);
+  assert.strictEqual(plan.frameCount, 20);
+  assert.strictEqual(plan.times.length, 20);
+  assert.strictEqual(plan.delayCs, 10);
+  assert.strictEqual(plan.truncated, false);
+
+  var long = utils.planVideoCapture({
+    durationSec: 120,
+    fps: 24,
+    videoWidth: 1920,
+    videoHeight: 1080
+  });
+  assert.ok(long.captureDuration <= utils.MAX_VIDEO_DURATION_SEC);
+  assert.ok(long.frameCount <= utils.MAX_FRAMES);
+  assert.ok(long.width * long.height <= utils.MAX_PIXELS);
+  assert.ok(long.width * long.height * long.frameCount <= utils.MAX_TOTAL_PIXELS);
+  assert.strictEqual(long.truncated, true);
+});
+
+check("assertFrameBudget rejects oversized totals", function () {
+  assert.throws(function () {
+    utils.assertFrameBudget(2000, 2000, 1);
+  }, /too large/i);
+  assert.throws(function () {
+    utils.assertFrameBudget(800, 600, utils.MAX_FRAMES + 1);
+  }, /Too many frames/i);
+});
+
 check("lzwEncode/lzwDecode round-trip indices", function () {
   var indices = [0, 1, 2, 2, 1, 0, 0, 1, 2];
   var minCodeSize = 2;
@@ -59,7 +103,6 @@ check("lzwEncode/lzwDecode round-trip indices", function () {
 });
 
 check("parseGif + sliceFrames + encodeGif round-trip", function () {
-  // Build a tiny 2-frame GIF via encoder, then parse and slice.
   function solidFrame(r, g, b, delayCs) {
     var pixels = new Uint8ClampedArray(4 * 4 * 4);
     for (var i = 0; i < pixels.length; i += 4) {
@@ -95,6 +138,25 @@ check("parseGif + sliceFrames + encodeGif round-trip", function () {
   var again = utils.encodeGif(sliced);
   var reparsed = utils.parseGif(again.buffer);
   assert.strictEqual(reparsed.frames.length, 2);
+});
+
+check("encodeGif preserves transparency", function () {
+  var pixels = new Uint8ClampedArray(2 * 2 * 4);
+  // opaque red, transparent, opaque blue, transparent
+  pixels.set([255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0, 0]);
+  var bytes = utils.encodeGif({
+    width: 2,
+    height: 2,
+    frames: [{ pixels: pixels, delayCs: 10 }]
+  });
+  var parsed = utils.parseGif(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+  assert.strictEqual(parsed.frames.length, 1);
+  var out = parsed.frames[0].pixels;
+  assert.strictEqual(out[3], 255); // opaque
+  assert.ok(out[0] > 200 && out[1] < 40 && out[2] < 40); // reddish
+  assert.strictEqual(out[7], 0); // transparent
+  assert.strictEqual(out[11], 255);
+  assert.strictEqual(out[15], 0);
 });
 
 check("delayMs converts centiseconds", function () {
