@@ -90,7 +90,7 @@ hugo --gc --minify  # production-like build → public/
 - Front matter: `title`, `slug`, `date`, `short`, `draft`
 - Permalinks: `/tool/:slug/`
 - Keep interactive UI in shortcodes and/or `static/js/` + `static/css/tool.css`
-- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`)
+- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`), GIF Slicer (`{{< gifSlicer >}}`)
 - Tools are navigable via the Tools menu; they are not included in `mainSections` (home feed)
 
 ### Games (`content/game/`)
@@ -125,6 +125,7 @@ hugo server                 # spot-check post/recipe/contact locally
 git submodule status        # theme should be checked out, not empty
 node scripts/smoke-svg-to-png.js       # SVG→PNG helper smoke tests
 node scripts/smoke-interest-return.js  # Interest Return calculator smoke tests
+node scripts/smoke-gif-slicer.js       # GIF slicer helper smoke tests
 node scripts/smoke-sumswipe.js         # SumSwipe puzzle helper smoke tests
 node scripts/build-sumswipe-dict.js    # rebuild ENABLE word list (optional)
 ```
