@@ -792,3 +792,71 @@
     flex: 1 1 calc(50% - 0.5rem);
   }
 }
+
+/* ---- GIF Slicer ---- */
+
+.gif-slicer .gs-fieldset {
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  max-width: 40rem;
+}
+
+.gif-slicer .gs-fieldset:disabled {
+  opacity: 0.55;
+}
+
+.gif-slicer .gs-fieldset legend {
+  padding: 0 0.35rem;
+  font-weight: 600;
+}
+
+.gif-slicer input[type="range"] {
+  width: 100%;
+  max-width: 40rem;
+  box-sizing: border-box;
+}
+
+.gif-slicer input[type="color"] {
+  width: 2.5rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.gif-slicer .tool-field--inline label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.gif-slicer .gs-preview-single {
+  grid-template-columns: 1fr;
+}
+
+.gif-slicer .gs-preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+}
+
+.gif-slicer .gs-canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: auto;
+}
+
+.gif-slicer .gs-meta {
+  margin-top: -0.35rem;
+}
+
+.gif-slicer .gs-fieldset[hidden] {
+  display: none !important;
+}
