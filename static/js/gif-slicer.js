@@ -1749,7 +1749,6 @@ if (typeof module !== "undefined" && module.exports) {
             if (!isCurrentJob(myJob)) {
               return;
             }
-            busy = false;
             if (err) {
               fail(err);
               return;
@@ -1759,13 +1758,44 @@ if (typeof module !== "undefined" && module.exports) {
               var base =
                 (file.name || "video").replace(/\.(mp4|webm|mov|m4v|ogv|avi|mkv|mpeg|mpg|3gp)$/i, "") ||
                 "video";
-              applyParsed(
-                result,
-                "video",
-                base,
-                "Loaded " + (file.name || "video") + "." + U.describeVideoSample(plan),
-                myJob
-              );
+              setStatus("Converting to GIF for preview…");
+              // Encode sampled frames to a real GIF, then parse it so preview/slice
+              // use the exact same path as a native GIF upload.
+              U.encodeGifAsync(result, {
+                isCancelled: function () {
+                  return !isCurrentJob(myJob);
+                },
+                onProgress: function (doneCount, total, phase) {
+                  if (!isCurrentJob(myJob)) {
+                    return;
+                  }
+                  var label = phase === "render" ? "Preparing GIF" : "Encoding GIF";
+                  setStatus(label + "… " + doneCount + "/" + total);
+                }
+              })
+                .then(function (bytes) {
+                  if (!isCurrentJob(myJob)) {
+                    return;
+                  }
+                  var buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+                  var parsedGif = U.parseGif(buffer);
+                  parsedGif.sourceType = "video";
+                  busy = false;
+                  applyParsed(
+                    parsedGif,
+                    "video",
+                    base,
+                    "Converted " +
+                      (file.name || "video") +
+                      " to GIF." +
+                      U.describeVideoSample(plan) +
+                      " Adjust the slice and text, then export.",
+                    myJob
+                  );
+                })
+                .catch(function (encodeErr) {
+                  fail(encodeErr);
+                });
             } catch (applyErr) {
               fail(applyErr);
             }

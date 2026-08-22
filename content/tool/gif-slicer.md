@@ -6,6 +6,6 @@ draft: false
 short: "Turn a GIF or video into a trimmed, captioned GIF in your browser"
 ---
 
-Upload a GIF or common video (MP4, WebM, MOV, and similar), slice the frame range, add constant text in the font and style you want, then export a GIF. Everything runs in your browser — nothing is uploaded.
+Upload a GIF or common video (MP4, WebM, MOV, and similar). Videos are converted to a GIF first, then you can slice frames, add constant text, and export. Everything runs in your browser — nothing is uploaded.
 
 {{< gifSlicer >}}

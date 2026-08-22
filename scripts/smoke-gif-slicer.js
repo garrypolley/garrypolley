@@ -193,6 +193,17 @@ function runAsyncChecks() {
     pixels[i + 3] = 255;
   }
 
+  function solidFrame(r, g, b, delayCs) {
+    var framePixels = new Uint8ClampedArray(8 * 8 * 4);
+    for (var j = 0; j < framePixels.length; j += 4) {
+      framePixels[j] = r;
+      framePixels[j + 1] = g;
+      framePixels[j + 2] = b;
+      framePixels[j + 3] = 255;
+    }
+    return { pixels: framePixels, delayCs: delayCs };
+  }
+
   return utils
     .encodeGifAsync({
       width: 2,
@@ -205,8 +216,25 @@ function runAsyncChecks() {
       assert.strictEqual(parsed.frames.length, 1);
       console.log("ok - encodeGifAsync resolves with valid GIF bytes");
     })
+    .then(function () {
+      var sampled = {
+        width: 8,
+        height: 8,
+        sourceType: "video",
+        frames: [solidFrame(10, 20, 30, 10), solidFrame(200, 100, 50, 10), solidFrame(0, 255, 0, 10)]
+      };
+      return utils.encodeGifAsync(sampled).then(function (bytes) {
+        var parsed = utils.parseGif(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+        assert.strictEqual(parsed.frames.length, 3);
+        assert.strictEqual(parsed.width, 8);
+        assert.strictEqual(parsed.height, 8);
+        var sliced = utils.sliceFrames(parsed, 0, 1);
+        assert.strictEqual(sliced.frames.length, 2);
+        console.log("ok - video-like frames convert to GIF then parse for preview path");
+      });
+    })
     .catch(function (err) {
-      console.error("fail - encodeGifAsync resolves with valid GIF bytes");
+      console.error("fail - async gif-slicer checks");
       console.error(err && err.stack ? err.stack : err);
       process.exitCode = 1;
     });
