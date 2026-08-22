@@ -1,0 +1,108 @@
+<div class="tool gif-slicer" id="gifSlicerTool">
+  <div class="tool-field">
+    <label for="gsFile">Upload a GIF or video</label>
+    <input
+      id="gsFile"
+      type="file"
+      accept=".gif,image/gif,video/*,.mp4,.webm,.mov,.m4v,.ogv,.avi"
+    />
+    <p class="tool-hint">GIF, MP4, WebM, MOV, M4V, Ogg Video, and similar formats your browser can play.</p>
+  </div>
+
+  <div class="tool-field tool-field--inline gs-meta" id="gsMeta" hidden>
+    <span class="tool-hint" id="gsMetaText"></span>
+  </div>
+
+  <fieldset class="gs-fieldset" id="gsVideoFields" disabled hidden>
+    <legend>Video sampling</legend>
+    <div class="tool-field tool-field--inline">
+      <label for="gsFps">Frames per second</label>
+      <input id="gsFps" type="number" min="1" max="30" step="1" value="10" />
+      <span class="tool-hint">Used when extracting frames from video (max 30s / frame budget).</span>
+    </div>
+    <div class="tool-actions">
+      <button type="button" id="gsResample" disabled>Re-extract frames</button>
+    </div>
+  </fieldset>
+
+  <fieldset class="gs-fieldset" id="gsSliceFields" disabled>
+    <legend>Slice frames</legend>
+    <div class="tool-field">
+      <label for="gsStartFrame">Start frame <span id="gsStartLabel">1</span></label>
+      <input id="gsStartFrame" type="range" min="0" max="0" value="0" step="1" />
+    </div>
+    <div class="tool-field">
+      <label for="gsEndFrame">End frame <span id="gsEndLabel">1</span></label>
+      <input id="gsEndFrame" type="range" min="0" max="0" value="0" step="1" />
+    </div>
+    <p class="tool-hint" id="gsSliceHint">Select a contiguous frame range to keep.</p>
+  </fieldset>
+
+  <fieldset class="gs-fieldset" id="gsTextFields" disabled>
+    <legend>Text overlay</legend>
+    <div class="tool-field">
+      <label for="gsText">Text</label>
+      <textarea id="gsText" rows="2" placeholder="Add caption text…"></textarea>
+    </div>
+    <div class="tool-field tool-field--inline">
+      <label for="gsFont">Font</label>
+      <select id="gsFont">
+        <option value="Impact, Haettenschweiler, sans-serif" selected>Impact</option>
+        <option value="'Arial Black', 'Helvetica Bold', sans-serif">Arial Black</option>
+        <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+        <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+        <option value="'Times New Roman', Times, serif">Times New Roman</option>
+        <option value="'Courier New', Courier, monospace">Courier New</option>
+        <option value="Verdana, Geneva, sans-serif">Verdana</option>
+        <option value="'Trebuchet MS', Helvetica, sans-serif">Trebuchet MS</option>
+        <option value="'Comic Sans MS', 'Comic Sans', cursive">Comic Sans</option>
+      </select>
+    </div>
+    <div class="tool-field tool-field--inline">
+      <label for="gsFontSize">Size</label>
+      <input id="gsFontSize" type="number" min="8" max="200" step="1" value="32" />
+      <label for="gsStyleBold"><input id="gsStyleBold" type="checkbox" checked /> Bold</label>
+      <label for="gsStyleItalic"><input id="gsStyleItalic" type="checkbox" /> Italic</label>
+    </div>
+    <div class="tool-field tool-field--inline">
+      <label for="gsFillColor">Fill</label>
+      <input id="gsFillColor" type="color" value="#ffffff" />
+      <label for="gsStrokeColor">Outline</label>
+      <input id="gsStrokeColor" type="color" value="#000000" />
+      <label for="gsStrokeWidth">Outline width</label>
+      <input id="gsStrokeWidth" type="number" min="0" max="20" step="1" value="3" />
+    </div>
+    <div class="tool-field tool-field--inline">
+      <label for="gsPosition">Position</label>
+      <select id="gsPosition">
+        <option value="top" selected>Top</option>
+        <option value="center">Center</option>
+        <option value="bottom">Bottom</option>
+      </select>
+      <label for="gsAlign">Align</label>
+      <select id="gsAlign">
+        <option value="center" selected>Center</option>
+        <option value="left">Left</option>
+        <option value="right">Right</option>
+      </select>
+    </div>
+  </fieldset>
+
+  <div class="tool-actions">
+    <button type="button" id="gsExport" disabled>Export GIF</button>
+    <button type="button" id="gsClear" class="tool-button--secondary">Clear</button>
+  </div>
+
+  <p id="gsStatus" class="tool-status" role="status" aria-live="polite"></p>
+
+  <div class="tool-preview gs-preview-single">
+    <div>
+      <h4>Preview</h4>
+      <div id="gsPreview" class="tool-preview-box gs-preview-box">
+        <p class="tool-hint">Upload a GIF or video to preview the sliced result here.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/gif-slicer.js"></script>
