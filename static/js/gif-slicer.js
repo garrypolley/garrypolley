@@ -1041,6 +1041,7 @@ var GifSlicerUtils = (function () {
     var isCancelled = typeof options.isCancelled === "function" ? options.isCancelled : function () {
       return false;
     };
+    var cancelMessage = String(options.cancelMessage || "Cancelled.");
 
     return new Promise(function (resolve, reject) {
       var width;
@@ -1067,7 +1068,7 @@ var GifSlicerUtils = (function () {
 
       function failIfCancelled() {
         if (isCancelled()) {
-          reject(new Error("Export cancelled."));
+          reject(new Error(cancelMessage));
           return true;
         }
         return false;
@@ -1179,6 +1180,51 @@ var GifSlicerUtils = (function () {
     return cs * 10;
   }
 
+  function assertSampledFramesUsable(parsed) {
+    if (!parsed || !parsed.frames || !parsed.frames.length) {
+      throw new Error("No frames were captured from the video.");
+    }
+    var width = Math.max(0, Math.floor(parsed.width || 0));
+    var height = Math.max(0, Math.floor(parsed.height || 0));
+    if (width <= 0 || height <= 0) {
+      throw new Error("Captured video has invalid dimensions.");
+    }
+    var expected = width * height * 4;
+    var sawOpaque = false;
+    var f;
+    for (f = 0; f < parsed.frames.length; f++) {
+      var pixels = parsed.frames[f] && parsed.frames[f].pixels;
+      if (!pixels || pixels.length !== expected) {
+        throw new Error("Captured frame data is incomplete.");
+      }
+      // Spot-check alpha; some browsers leave video pixels fully transparent.
+      for (var i = 3; i < pixels.length; i += 64) {
+        if (pixels[i] >= 128) {
+          sawOpaque = true;
+          break;
+        }
+      }
+      if (sawOpaque) {
+        break;
+      }
+    }
+    if (!sawOpaque) {
+      throw new Error(
+        "Captured frames look empty. Try MP4 (H.264)/WebM, or lower the FPS and retry."
+      );
+    }
+  }
+
+  function forceOpaquePixels(pixels) {
+    if (!pixels || !pixels.length) {
+      return pixels;
+    }
+    for (var i = 3; i < pixels.length; i += 4) {
+      pixels[i] = 255;
+    }
+    return pixels;
+  }
+
   function describeVideoSample(plan) {
     var span = Math.round((plan.sampledDurationSec || 0) * 10) / 10;
     var parts =
@@ -1221,6 +1267,8 @@ var GifSlicerUtils = (function () {
     isVideoFile: isVideoFile,
     assertFileSize: assertFileSize,
     assertFrameBudget: assertFrameBudget,
+    assertSampledFramesUsable: assertSampledFramesUsable,
+    forceOpaquePixels: forceOpaquePixels,
     scaledSize: scaledSize,
     planVideoCapture: planVideoCapture,
     describeVideoSample: describeVideoSample,
@@ -1373,6 +1421,9 @@ if (typeof module !== "undefined" && module.exports) {
       return;
     }
     ensureCanvas(parsed.width, parsed.height);
+    // Opaque backdrop so transparent/empty pixels don't look like a missing preview.
+    previewCtx.fillStyle = "#000000";
+    previewCtx.fillRect(0, 0, parsed.width, parsed.height);
     var imageData = previewCtx.createImageData(parsed.width, parsed.height);
     imageData.data.set(frame.pixels);
     previewCtx.putImageData(imageData, 0, 0);
@@ -1619,6 +1670,8 @@ if (typeof module !== "undefined" && module.exports) {
         try {
           ctx.drawImage(video, 0, 0, plan.width, plan.height);
           var imageData = ctx.getImageData(0, 0, plan.width, plan.height);
+          // Some browsers yield transparent pixels from video; force opaque for preview/export.
+          U.forceOpaquePixels(imageData.data);
           frames.push({
             delayCs: plan.delayCs,
             disposal: 1,
@@ -1755,47 +1808,24 @@ if (typeof module !== "undefined" && module.exports) {
             }
             try {
               U.assertFrameBudget(result.width, result.height, result.frames.length);
+              U.assertSampledFramesUsable(result);
               var base =
                 (file.name || "video").replace(/\.(mp4|webm|mov|m4v|ogv|avi|mkv|mpeg|mpg|3gp)$/i, "") ||
                 "video";
-              setStatus("Converting to GIF for preview…");
-              // Encode sampled frames to a real GIF, then parse it so preview/slice
-              // use the exact same path as a native GIF upload.
-              U.encodeGifAsync(result, {
-                isCancelled: function () {
-                  return !isCurrentJob(myJob);
-                },
-                onProgress: function (doneCount, total, phase) {
-                  if (!isCurrentJob(myJob)) {
-                    return;
-                  }
-                  var label = phase === "render" ? "Preparing GIF" : "Encoding GIF";
-                  setStatus(label + "… " + doneCount + "/" + total);
-                }
-              })
-                .then(function (bytes) {
-                  if (!isCurrentJob(myJob)) {
-                    return;
-                  }
-                  var buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-                  var parsedGif = U.parseGif(buffer);
-                  parsedGif.sourceType = "video";
-                  busy = false;
-                  applyParsed(
-                    parsedGif,
-                    "video",
-                    base,
-                    "Converted " +
-                      (file.name || "video") +
-                      " to GIF." +
-                      U.describeVideoSample(plan) +
-                      " Adjust the slice and text, then export.",
-                    myJob
-                  );
-                })
-                .catch(function (encodeErr) {
-                  fail(encodeErr);
-                });
+              // Keep sampled RGBA as the working set so preview/slice match GIF UX
+              // without an extra encode→parse pass (avoids memory spike + double quantization).
+              busy = false;
+              applyParsed(
+                result,
+                "video",
+                base,
+                "Loaded " +
+                  (file.name || "video") +
+                  "." +
+                  U.describeVideoSample(plan) +
+                  " Adjust the slice and text, then export.",
+                myJob
+              );
             } catch (applyErr) {
               fail(applyErr);
             }
@@ -1922,6 +1952,7 @@ if (typeof module !== "undefined" && module.exports) {
       isCancelled: function () {
         return !isCurrentJob(exportJob);
       },
+      cancelMessage: "Export cancelled.",
       onProgress: function (doneCount, total, phase) {
         if (!isCurrentJob(exportJob)) {
           return;

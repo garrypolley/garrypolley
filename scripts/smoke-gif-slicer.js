@@ -184,6 +184,37 @@ check("delayMs converts centiseconds", function () {
   assert.strictEqual(utils.delayMs(25), 250);
 });
 
+check("forceOpaquePixels sets alpha to 255", function () {
+  var pixels = new Uint8ClampedArray([1, 2, 3, 0, 4, 5, 6, 10]);
+  utils.forceOpaquePixels(pixels);
+  assert.strictEqual(pixels[3], 255);
+  assert.strictEqual(pixels[7], 255);
+});
+
+check("assertSampledFramesUsable rejects empty/transparent frames", function () {
+  var empty = new Uint8ClampedArray(2 * 2 * 4);
+  assert.throws(function () {
+    utils.assertSampledFramesUsable({
+      width: 2,
+      height: 2,
+      frames: [{ pixels: empty, delayCs: 10 }]
+    });
+  }, /empty/i);
+
+  var ok = new Uint8ClampedArray(2 * 2 * 4);
+  for (var i = 0; i < ok.length; i += 4) {
+    ok[i] = 20;
+    ok[i + 1] = 30;
+    ok[i + 2] = 40;
+    ok[i + 3] = 255;
+  }
+  utils.assertSampledFramesUsable({
+    width: 2,
+    height: 2,
+    frames: [{ pixels: ok, delayCs: 10 }]
+  });
+});
+
 function runAsyncChecks() {
   var pixels = new Uint8ClampedArray(2 * 2 * 4);
   for (var i = 0; i < pixels.length; i += 4) {
@@ -223,15 +254,45 @@ function runAsyncChecks() {
         sourceType: "video",
         frames: [solidFrame(10, 20, 30, 10), solidFrame(200, 100, 50, 10), solidFrame(0, 255, 0, 10)]
       };
-      return utils.encodeGifAsync(sampled).then(function (bytes) {
-        var parsed = utils.parseGif(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
-        assert.strictEqual(parsed.frames.length, 3);
-        assert.strictEqual(parsed.width, 8);
-        assert.strictEqual(parsed.height, 8);
-        var sliced = utils.sliceFrames(parsed, 0, 1);
-        assert.strictEqual(sliced.frames.length, 2);
-        console.log("ok - video-like frames convert to GIF then parse for preview path");
+      utils.assertSampledFramesUsable(sampled);
+      // Working set stays RGBA; export encodes once (no encode→parse round-trip).
+      var sliced = utils.sliceFrames(sampled, 0, 1);
+      assert.strictEqual(sliced.frames.length, 2);
+      return utils.encodeGifAsync(sliced, { cancelMessage: "Export cancelled." }).then(function (bytes) {
+        assert.ok(bytes.length > 20);
+        console.log("ok - video-like RGBA frames slice then encode once");
       });
+    })
+    .then(function () {
+      var cancelled = false;
+      return utils
+        .encodeGifAsync(
+          {
+            width: 2,
+            height: 2,
+            frames: [{ pixels: pixels, delayCs: 8 }]
+          },
+          {
+            isCancelled: function () {
+              return true;
+            },
+            cancelMessage: "Conversion cancelled."
+          }
+        )
+        .then(function () {
+          throw new Error("expected cancellation");
+        })
+        .catch(function (err) {
+          if (/expected cancellation/.test(err.message)) {
+            throw err;
+          }
+          assert.strictEqual(err.message, "Conversion cancelled.");
+          cancelled = true;
+          console.log("ok - encodeGifAsync uses custom cancel message");
+        })
+        .then(function () {
+          assert.strictEqual(cancelled, true);
+        });
     })
     .catch(function (err) {
       console.error("fail - async gif-slicer checks");
