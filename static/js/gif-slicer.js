@@ -1650,12 +1650,13 @@ if (typeof module !== "undefined" && module.exports) {
         return;
       }
 
-      // Soft fallback if already at the target time (seeked may not fire).
+      // Soft fallback only when already parked on the target (seeked may not fire).
+      // Keep epsilon tiny so high-FPS sampling cannot accept the previous frame.
       softTimer = setTimeout(function () {
-        if (!settled && Math.abs(video.currentTime - target) < 0.05) {
+        if (!settled && Math.abs(video.currentTime - target) < 0.001) {
           finishSeek();
         }
-      }, 250);
+      }, 50);
 
       // Hard fail-safe so a stuck seek cannot hang the tool forever.
       hardTimer = setTimeout(function () {
