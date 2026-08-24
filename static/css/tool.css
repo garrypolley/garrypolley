@@ -859,3 +859,44 @@
 .gif-slicer .gs-fieldset[hidden] {
   display: none !important;
 }
+
+.inflation-calculator .ic-table-wrap {
+  margin: 1rem 0 1.25rem;
+}
+
+.inflation-calculator .ic-table-scroll {
+  max-height: 22rem;
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.inflation-calculator .ic-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.inflation-calculator .ic-table th,
+.inflation-calculator .ic-table td {
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.inflation-calculator .ic-table th {
+  position: sticky;
+  top: 0;
+  background: #f7f7f7;
+  font-weight: 600;
+}
+
+.inflation-calculator .ic-table tr.is-endpoint td {
+  font-weight: 600;
+  background: #f0f7fa;
+}
+
+.inflation-calculator .ic-meta {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+}
