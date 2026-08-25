@@ -158,6 +158,7 @@
   var tableBody = document.getElementById("icTableBody");
   var chartCanvas = document.getElementById("icChart");
   var chartReadoutEl = document.getElementById("icChartReadout");
+  var chartAnnounceEl = document.getElementById("icChartAnnounce");
   var metaEl = document.getElementById("icMeta");
   var resetBtn = document.getElementById("icReset");
 
@@ -185,20 +186,44 @@
     }
   }
 
-  function setChartReadout(row) {
-    if (!chartReadoutEl) return;
-    if (!row) {
-      chartReadoutEl.textContent = "";
-      chartReadoutEl.hidden = true;
-      return;
+  function formatScrubText(row) {
+    return row.year + ": " + utils.formatMoney(row.value) + " (CPI-U " + row.cpi.toFixed(3) + ")";
+  }
+
+  function setChartReadout(row, announce) {
+    if (chartReadoutEl) {
+      if (!row) {
+        chartReadoutEl.textContent = "";
+        chartReadoutEl.hidden = true;
+      } else {
+        chartReadoutEl.hidden = false;
+        chartReadoutEl.textContent = formatScrubText(row);
+      }
     }
-    chartReadoutEl.hidden = false;
-    chartReadoutEl.textContent =
-      row.year + ": " + utils.formatMoney(row.value) + " (CPI-U " + row.cpi.toFixed(3) + ")";
+    if (announce && chartAnnounceEl) {
+      chartAnnounceEl.textContent = row ? formatScrubText(row) : "";
+    }
+  }
+
+  function ensureCanvasContext() {
+    if (!chartCanvas || !chartState) return null;
+    var dpr = window.devicePixelRatio || 1;
+    var tw = Math.round(chartState.cssW * dpr);
+    var th = Math.round(chartState.cssH * dpr);
+    if (chartCanvas.width !== tw || chartCanvas.height !== th) {
+      chartCanvas.width = tw;
+      chartCanvas.height = th;
+    }
+    var ctx = chartCanvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return ctx;
   }
 
   function paintChart() {
     if (!chartCanvas || !chartState) return;
+    var ctx = ensureCanvasContext();
+    if (!ctx) return;
+
     var rows = chartState.rows;
     var pad = chartState.pad;
     var cssW = chartState.cssW;
@@ -207,12 +232,6 @@
     var h = chartState.h;
     var minV = chartState.minV;
     var maxV = chartState.maxV;
-    var dpr = window.devicePixelRatio || 1;
-
-    chartCanvas.width = Math.round(cssW * dpr);
-    chartCanvas.height = Math.round(cssH * dpr);
-    var ctx = chartCanvas.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     function xAt(idx) {
       if (rows.length === 1) return pad.left + w / 2;
@@ -300,7 +319,6 @@
     ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
     var labelW = ctx.measureText(label).width;
     var boxPadX = 10;
-    var boxPadY = 6;
     var boxW = labelW + boxPadX * 2;
     var boxH = 24;
     var boxX = sx - boxW / 2;
@@ -310,8 +328,6 @@
     if (boxY < pad.top) boxY = sy + 12;
 
     ctx.fillStyle = "rgba(26, 95, 122, 0.95)";
-    ctx.strokeStyle = "rgba(26, 95, 122, 0.95)";
-    ctx.lineWidth = 1;
     var r = 4;
     ctx.beginPath();
     ctx.moveTo(boxX + r, boxY);
@@ -332,7 +348,7 @@
     if (!chartCanvas || !rows || rows.length === 0) {
       chartState = null;
       scrubIndex = null;
-      setChartReadout(null);
+      setChartReadout(null, true);
       return;
     }
 
@@ -367,14 +383,17 @@
       maxV: maxV,
     };
 
+    // Force bitmap resize when geometry changes (paint only reallocates if needed).
+    ensureCanvasContext();
+
     if (scrubIndex != null && scrubIndex >= rows.length) {
       scrubIndex = rows.length - 1;
     }
     paintChart();
     if (scrubIndex != null) {
-      setChartReadout(rows[scrubIndex]);
+      setChartReadout(rows[scrubIndex], false);
     } else {
-      setChartReadout(null);
+      setChartReadout(null, false);
     }
   }
 
@@ -385,6 +404,17 @@
     return utils.nearestIndex(x, chartState.rows.length, chartState.pad.left, chartState.w);
   }
 
+  function pointerInsideCanvas(clientX, clientY) {
+    if (!chartCanvas) return false;
+    var rect = chartCanvas.getBoundingClientRect();
+    return (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    );
+  }
+
   function scrubTo(clientX) {
     if (!chartState) return;
     var idx = pointerToIndex(clientX);
@@ -392,14 +422,26 @@
     if (idx === scrubIndex) return;
     scrubIndex = idx;
     paintChart();
-    setChartReadout(chartState.rows[idx]);
+    // Visual only while moving; announce on pointer-up / keyboard.
+    setChartReadout(chartState.rows[idx], false);
   }
 
-  function clearScrub() {
-    if (scrubIndex == null) return;
+  function announceCurrentScrub() {
+    if (scrubIndex == null || !chartState) {
+      setChartReadout(null, true);
+      return;
+    }
+    setChartReadout(chartState.rows[scrubIndex], true);
+  }
+
+  function clearScrub(announce) {
+    if (scrubIndex == null) {
+      if (announce) setChartReadout(null, true);
+      return;
+    }
     scrubIndex = null;
     paintChart();
-    setChartReadout(null);
+    setChartReadout(null, !!announce);
   }
 
   function onChartPointerDown(evt) {
@@ -424,30 +466,41 @@
   }
 
   function onChartPointerUp(evt) {
+    var wasDown = isPointerDown;
     isPointerDown = false;
-    if (evt.pointerType !== "mouse") {
-      // Keep the last touch selection visible; mouse leaves clear it.
+    if (!wasDown && scrubIndex == null) return;
+
+    if (evt.pointerType === "mouse" || evt.pointerType === "") {
+      if (!pointerInsideCanvas(evt.clientX, evt.clientY)) {
+        clearScrub(true);
+        return;
+      }
     }
+    announceCurrentScrub();
+  }
+
+  function onChartLostPointerCapture() {
+    isPointerDown = false;
   }
 
   function onChartPointerLeave() {
-    if (!isPointerDown) clearScrub();
+    if (!isPointerDown) clearScrub(true);
   }
 
   function onChartKeyDown(evt) {
     if (!chartState || !chartState.rows.length) return;
     var len = chartState.rows.length;
     var next = scrubIndex == null ? len - 1 : scrubIndex;
-    if (evt.key === "ArrowLeft" || evt.key === "ArrowDown") {
+    if (evt.key === "ArrowLeft") {
       next = Math.max(0, next - 1);
-    } else if (evt.key === "ArrowRight" || evt.key === "ArrowUp") {
+    } else if (evt.key === "ArrowRight") {
       next = Math.min(len - 1, next + 1);
     } else if (evt.key === "Home") {
       next = 0;
     } else if (evt.key === "End") {
       next = len - 1;
     } else if (evt.key === "Escape") {
-      clearScrub();
+      clearScrub(true);
       return;
     } else {
       return;
@@ -455,15 +508,12 @@
     evt.preventDefault();
     scrubIndex = next;
     paintChart();
-    setChartReadout(chartState.rows[next]);
+    setChartReadout(chartState.rows[next], true);
   }
 
   function renderTable(rows) {
     tableBody.innerHTML = "";
-    // Show every year for short ranges; sample for long ones so the DOM stays light.
-    var step = rows.length > 120 ? 5 : rows.length > 60 ? 2 : 1;
-    var shown = 0;
-    for (var i = 0; i < rows.length; i += step) {
+    for (var i = 0; i < rows.length; i += 1) {
       var row = rows[i];
       var tr = document.createElement("tr");
       if (i === 0 || i === rows.length - 1) tr.className = "is-endpoint";
@@ -476,30 +526,11 @@
         row.cpi.toFixed(3) +
         "</td>";
       tableBody.appendChild(tr);
-      shown += 1;
     }
-    // Always include the final year if sampling skipped it.
-    if (step > 1 && (rows.length - 1) % step !== 0) {
-      var last = rows[rows.length - 1];
-      var trLast = document.createElement("tr");
-      trLast.className = "is-endpoint";
-      trLast.innerHTML =
-        "<td>" +
-        last.year +
-        "</td><td>" +
-        utils.formatMoney(last.value) +
-        "</td><td>" +
-        last.cpi.toFixed(3) +
-        "</td>";
-      tableBody.appendChild(trLast);
-    }
-    tableWrap.hidden = shown === 0;
+    tableWrap.hidden = rows.length === 0;
     var caption = document.getElementById("icTableCaption");
     if (caption) {
-      caption.textContent =
-        step > 1
-          ? "Showing every " + step + " years (" + shown + " of " + rows.length + ")."
-          : "Equivalent value in each year (" + rows.length + " years).";
+      caption.textContent = "Equivalent value in each year (" + rows.length + " years).";
     }
   }
 
@@ -595,6 +626,7 @@
     chartCanvas.addEventListener("pointercancel", function () {
       isPointerDown = false;
     });
+    chartCanvas.addEventListener("lostpointercapture", onChartLostPointerCapture);
     chartCanvas.addEventListener("pointerleave", onChartPointerLeave);
     chartCanvas.addEventListener("keydown", onChartKeyDown);
   }

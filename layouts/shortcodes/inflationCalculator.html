@@ -26,11 +26,12 @@
       id="icChart"
       width="720"
       height="280"
-      role="img"
-      aria-label="Equivalent dollars by year. Drag or hover to inspect a year."
+      role="application"
+      aria-label="Inflation chart. Drag or hover to inspect a year. Use arrow keys when focused."
       tabindex="0"
     ></canvas>
-    <p id="icChartReadout" class="ic-chart-readout" aria-live="polite"></p>
+    <p id="icChartReadout" class="ic-chart-readout" hidden></p>
+    <p id="icChartAnnounce" class="ic-chart-announce" aria-live="polite"></p>
   </div>
   <p class="tool-hint ic-chart-hint">Drag or hover across the chart to see any year’s equivalent value.</p>
 
