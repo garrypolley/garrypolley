@@ -1,0 +1,61 @@
+<div class="tool inflation-calculator" id="inflationCalculatorTool">
+  <div class="tool-field tool-field--inline">
+    <label for="icAmount">Amount ($)</label>
+    <input id="icAmount" type="number" min="0" max="1000000000000" step="0.01" value="60" />
+  </div>
+  <div class="tool-field tool-field--inline">
+    <label for="icFromYear">In year</label>
+    <select id="icFromYear"></select>
+  </div>
+  <div class="tool-field tool-field--inline">
+    <label for="icToYear">Equals in year</label>
+    <select id="icToYear"></select>
+  </div>
+
+  <p class="tool-hint">
+    Uses U.S. CPI-U annual averages from the Bureau of Labor Statistics.
+    Pick any two years from 1913 onward (official annual series starts then—not 1912).
+  </p>
+
+  <p id="icStatus" class="tool-status" role="status" aria-live="polite"></p>
+
+  <div id="icSummary" class="tool-summary" aria-live="polite"></div>
+
+  <div class="tool-chart-wrap ic-chart-wrap">
+    <canvas
+      id="icChart"
+      width="720"
+      height="280"
+      role="application"
+      aria-label="Inflation chart. Drag or hover to inspect a year. Use arrow keys when focused."
+      tabindex="0"
+    ></canvas>
+    <p id="icChartReadout" class="ic-chart-readout" hidden></p>
+    <p id="icChartAnnounce" class="ic-chart-announce" aria-live="polite"></p>
+  </div>
+  <p class="tool-hint ic-chart-hint">Drag or hover across the chart to see any year’s equivalent value.</p>
+
+  <div id="icTableWrap" class="ic-table-wrap" hidden>
+    <p id="icTableCaption" class="tool-hint"></p>
+    <div class="ic-table-scroll">
+      <table class="ic-table">
+        <thead>
+          <tr>
+            <th scope="col">Year</th>
+            <th scope="col">Equivalent $</th>
+            <th scope="col">CPI-U</th>
+          </tr>
+        </thead>
+        <tbody id="icTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tool-actions">
+    <button type="button" id="icReset" class="tool-button--secondary">Reset example</button>
+  </div>
+
+  <p id="icMeta" class="tool-hint ic-meta"></p>
+</div>
+
+<script src="/js/inflation-calculator.js"></script>

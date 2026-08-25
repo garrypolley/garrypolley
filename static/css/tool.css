@@ -859,3 +859,83 @@
 .gif-slicer .gs-fieldset[hidden] {
   display: none !important;
 }
+
+.inflation-calculator .ic-table-wrap {
+  margin: 1rem 0 1.25rem;
+}
+
+.inflation-calculator .ic-table-scroll {
+  max-height: 22rem;
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.inflation-calculator .ic-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.inflation-calculator .ic-table th,
+.inflation-calculator .ic-table td {
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.inflation-calculator .ic-table th {
+  position: sticky;
+  top: 0;
+  background: #f7f7f7;
+  font-weight: 600;
+}
+
+.inflation-calculator .ic-table tr.is-endpoint td {
+  font-weight: 600;
+  background: #f0f7fa;
+}
+
+.inflation-calculator .ic-meta {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+}
+
+.inflation-calculator .ic-chart-wrap {
+  position: relative;
+}
+
+.inflation-calculator .ic-chart-wrap canvas {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.inflation-calculator .ic-chart-readout {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid #ddd;
+  background: #f0f7fa;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a5f7a;
+}
+
+.inflation-calculator .ic-chart-readout[hidden] {
+  display: none;
+}
+
+.inflation-calculator .ic-chart-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.inflation-calculator .ic-chart-hint {
+  margin-top: 0.35rem;
+}
