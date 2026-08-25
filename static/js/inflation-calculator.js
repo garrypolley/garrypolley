@@ -49,6 +49,19 @@
   }
 
   /**
+   * Map a chart X (CSS pixels) to the nearest series index.
+   * Points are spaced evenly across [padLeft, padLeft + plotWidth].
+   */
+  function nearestIndex(x, length, padLeft, plotWidth) {
+    if (!Number.isFinite(length) || length <= 1) return 0;
+    if (!Number.isFinite(plotWidth) || plotWidth <= 0) return 0;
+    var t = (x - padLeft) / plotWidth;
+    if (t < 0) t = 0;
+    if (t > 1) t = 1;
+    return Math.round(t * (length - 1));
+  }
+
+  /**
    * Series of equivalent values for each year between from and to,
    * using the from-year amount as the baseline.
    */
@@ -120,6 +133,7 @@
     convert: convert,
     series: series,
     yearsBetween: yearsBetween,
+    nearestIndex: nearestIndex,
     formatMoney: formatMoney,
     roundMoney: roundMoney,
     parseCpiPayload: parseCpiPayload,
@@ -143,12 +157,16 @@
   var tableWrap = document.getElementById("icTableWrap");
   var tableBody = document.getElementById("icTableBody");
   var chartCanvas = document.getElementById("icChart");
+  var chartReadoutEl = document.getElementById("icChartReadout");
   var metaEl = document.getElementById("icMeta");
   var resetBtn = document.getElementById("icReset");
 
   var cpi = null;
   var DEFAULT_AMOUNT = 60;
   var DEFAULT_FROM = 1913;
+  var chartState = null;
+  var scrubIndex = null;
+  var isPointerDown = false;
 
   function setStatus(msg, isError) {
     statusEl.textContent = msg || "";
@@ -167,37 +185,34 @@
     }
   }
 
-  function drawChart(rows) {
-    if (!chartCanvas || !rows || rows.length === 0) return;
-    var ctx = chartCanvas.getContext("2d");
+  function setChartReadout(row) {
+    if (!chartReadoutEl) return;
+    if (!row) {
+      chartReadoutEl.textContent = "";
+      chartReadoutEl.hidden = true;
+      return;
+    }
+    chartReadoutEl.hidden = false;
+    chartReadoutEl.textContent =
+      row.year + ": " + utils.formatMoney(row.value) + " (CPI-U " + row.cpi.toFixed(3) + ")";
+  }
+
+  function paintChart() {
+    if (!chartCanvas || !chartState) return;
+    var rows = chartState.rows;
+    var pad = chartState.pad;
+    var cssW = chartState.cssW;
+    var cssH = chartState.cssH;
+    var w = chartState.w;
+    var h = chartState.h;
+    var minV = chartState.minV;
+    var maxV = chartState.maxV;
     var dpr = window.devicePixelRatio || 1;
-    var cssW = chartCanvas.clientWidth || 720;
-    var cssH = 280;
+
     chartCanvas.width = Math.round(cssW * dpr);
     chartCanvas.height = Math.round(cssH * dpr);
+    var ctx = chartCanvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    var pad = { top: 16, right: 16, bottom: 36, left: 64 };
-    var w = cssW - pad.left - pad.right;
-    var h = cssH - pad.top - pad.bottom;
-
-    ctx.clearRect(0, 0, cssW, cssH);
-    ctx.fillStyle = "#fafafa";
-    ctx.fillRect(0, 0, cssW, cssH);
-
-    var minV = rows[0].value;
-    var maxV = rows[0].value;
-    for (var i = 0; i < rows.length; i += 1) {
-      if (rows[i].value < minV) minV = rows[i].value;
-      if (rows[i].value > maxV) maxV = rows[i].value;
-    }
-    if (maxV === minV) {
-      maxV = minV + 1;
-      minV = Math.max(0, minV - 1);
-    }
-    var padY = (maxV - minV) * 0.08;
-    minV = Math.max(0, minV - padY);
-    maxV = maxV + padY;
 
     function xAt(idx) {
       if (rows.length === 1) return pad.left + w / 2;
@@ -206,6 +221,10 @@
     function yAt(v) {
       return pad.top + h - ((v - minV) / (maxV - minV)) * h;
     }
+
+    ctx.clearRect(0, 0, cssW, cssH);
+    ctx.fillStyle = "#fafafa";
+    ctx.fillRect(0, 0, cssW, cssH);
 
     ctx.strokeStyle = "#ddd";
     ctx.lineWidth = 1;
@@ -252,6 +271,191 @@
     ctx.fillText(String(first.year), pad.left, pad.top + h + 10);
     ctx.textAlign = "right";
     ctx.fillText(String(last.year), pad.left + w, pad.top + h + 10);
+
+    if (scrubIndex == null || scrubIndex < 0 || scrubIndex >= rows.length) return;
+
+    var row = rows[scrubIndex];
+    var sx = xAt(scrubIndex);
+    var sy = yAt(row.value);
+
+    ctx.strokeStyle = "rgba(26, 95, 122, 0.45)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(sx, pad.top);
+    ctx.lineTo(sx, pad.top + h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "#1a5f7a";
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    var label = row.year + "  ·  " + utils.formatMoney(row.value);
+    ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
+    var labelW = ctx.measureText(label).width;
+    var boxPadX = 10;
+    var boxPadY = 6;
+    var boxW = labelW + boxPadX * 2;
+    var boxH = 24;
+    var boxX = sx - boxW / 2;
+    var boxY = sy - boxH - 12;
+    if (boxX < pad.left) boxX = pad.left;
+    if (boxX + boxW > pad.left + w) boxX = pad.left + w - boxW;
+    if (boxY < pad.top) boxY = sy + 12;
+
+    ctx.fillStyle = "rgba(26, 95, 122, 0.95)";
+    ctx.strokeStyle = "rgba(26, 95, 122, 0.95)";
+    ctx.lineWidth = 1;
+    var r = 4;
+    ctx.beginPath();
+    ctx.moveTo(boxX + r, boxY);
+    ctx.arcTo(boxX + boxW, boxY, boxX + boxW, boxY + boxH, r);
+    ctx.arcTo(boxX + boxW, boxY + boxH, boxX, boxY + boxH, r);
+    ctx.arcTo(boxX, boxY + boxH, boxX, boxY, r);
+    ctx.arcTo(boxX, boxY, boxX + boxW, boxY, r);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, boxX + boxPadX, boxY + boxH / 2);
+  }
+
+  function drawChart(rows) {
+    if (!chartCanvas || !rows || rows.length === 0) {
+      chartState = null;
+      scrubIndex = null;
+      setChartReadout(null);
+      return;
+    }
+
+    var cssW = chartCanvas.clientWidth || 720;
+    var cssH = 280;
+    var pad = { top: 16, right: 16, bottom: 36, left: 64 };
+    var w = cssW - pad.left - pad.right;
+    var h = cssH - pad.top - pad.bottom;
+
+    var minV = rows[0].value;
+    var maxV = rows[0].value;
+    for (var i = 0; i < rows.length; i += 1) {
+      if (rows[i].value < minV) minV = rows[i].value;
+      if (rows[i].value > maxV) maxV = rows[i].value;
+    }
+    if (maxV === minV) {
+      maxV = minV + 1;
+      minV = Math.max(0, minV - 1);
+    }
+    var padY = (maxV - minV) * 0.08;
+    minV = Math.max(0, minV - padY);
+    maxV = maxV + padY;
+
+    chartState = {
+      rows: rows,
+      pad: pad,
+      cssW: cssW,
+      cssH: cssH,
+      w: w,
+      h: h,
+      minV: minV,
+      maxV: maxV,
+    };
+
+    if (scrubIndex != null && scrubIndex >= rows.length) {
+      scrubIndex = rows.length - 1;
+    }
+    paintChart();
+    if (scrubIndex != null) {
+      setChartReadout(rows[scrubIndex]);
+    } else {
+      setChartReadout(null);
+    }
+  }
+
+  function pointerToIndex(clientX) {
+    if (!chartState || !chartCanvas) return null;
+    var rect = chartCanvas.getBoundingClientRect();
+    var x = clientX - rect.left;
+    return utils.nearestIndex(x, chartState.rows.length, chartState.pad.left, chartState.w);
+  }
+
+  function scrubTo(clientX) {
+    if (!chartState) return;
+    var idx = pointerToIndex(clientX);
+    if (idx == null) return;
+    if (idx === scrubIndex) return;
+    scrubIndex = idx;
+    paintChart();
+    setChartReadout(chartState.rows[idx]);
+  }
+
+  function clearScrub() {
+    if (scrubIndex == null) return;
+    scrubIndex = null;
+    paintChart();
+    setChartReadout(null);
+  }
+
+  function onChartPointerDown(evt) {
+    if (!chartState) return;
+    isPointerDown = true;
+    if (chartCanvas.setPointerCapture) {
+      try {
+        chartCanvas.setPointerCapture(evt.pointerId);
+      } catch (err) {
+        /* ignore */
+      }
+    }
+    scrubTo(evt.clientX);
+    evt.preventDefault();
+  }
+
+  function onChartPointerMove(evt) {
+    if (!chartState) return;
+    if (evt.pointerType === "mouse" || isPointerDown) {
+      scrubTo(evt.clientX);
+    }
+  }
+
+  function onChartPointerUp(evt) {
+    isPointerDown = false;
+    if (evt.pointerType !== "mouse") {
+      // Keep the last touch selection visible; mouse leaves clear it.
+    }
+  }
+
+  function onChartPointerLeave() {
+    if (!isPointerDown) clearScrub();
+  }
+
+  function onChartKeyDown(evt) {
+    if (!chartState || !chartState.rows.length) return;
+    var len = chartState.rows.length;
+    var next = scrubIndex == null ? len - 1 : scrubIndex;
+    if (evt.key === "ArrowLeft" || evt.key === "ArrowDown") {
+      next = Math.max(0, next - 1);
+    } else if (evt.key === "ArrowRight" || evt.key === "ArrowUp") {
+      next = Math.min(len - 1, next + 1);
+    } else if (evt.key === "Home") {
+      next = 0;
+    } else if (evt.key === "End") {
+      next = len - 1;
+    } else if (evt.key === "Escape") {
+      clearScrub();
+      return;
+    } else {
+      return;
+    }
+    evt.preventDefault();
+    scrubIndex = next;
+    paintChart();
+    setChartReadout(chartState.rows[next]);
   }
 
   function renderTable(rows) {
@@ -310,6 +514,7 @@
       setStatus("Enter a non-negative dollar amount.", true);
       summaryEl.innerHTML = "";
       tableWrap.hidden = true;
+      drawChart(null);
       return;
     }
 
@@ -318,6 +523,7 @@
       setStatus(result.error, true);
       summaryEl.innerHTML = "";
       tableWrap.hidden = true;
+      drawChart(null);
       return;
     }
 
@@ -380,6 +586,18 @@
   window.addEventListener("resize", function () {
     if (cpi) render();
   });
+
+  if (chartCanvas) {
+    chartCanvas.style.touchAction = "none";
+    chartCanvas.addEventListener("pointerdown", onChartPointerDown);
+    chartCanvas.addEventListener("pointermove", onChartPointerMove);
+    chartCanvas.addEventListener("pointerup", onChartPointerUp);
+    chartCanvas.addEventListener("pointercancel", function () {
+      isPointerDown = false;
+    });
+    chartCanvas.addEventListener("pointerleave", onChartPointerLeave);
+    chartCanvas.addEventListener("keydown", onChartKeyDown);
+  }
 
   setStatus("Loading BLS CPI data…");
 

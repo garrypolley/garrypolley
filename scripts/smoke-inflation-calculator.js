@@ -84,6 +84,17 @@ check("formatMoney returns USD currency string", function () {
   assert.ok(utils.formatMoney(1951.17).indexOf("1,951.17") >= 0);
 });
 
+check("nearestIndex maps plot edges and midpoint", function () {
+  var padLeft = 64;
+  var width = 600;
+  assert.strictEqual(utils.nearestIndex(padLeft, 113, padLeft, width), 0);
+  assert.strictEqual(utils.nearestIndex(padLeft + width, 113, padLeft, width), 112);
+  assert.strictEqual(utils.nearestIndex(padLeft + width / 2, 5, padLeft, width), 2);
+  assert.strictEqual(utils.nearestIndex(padLeft - 50, 10, padLeft, width), 0);
+  assert.strictEqual(utils.nearestIndex(padLeft + width + 50, 10, padLeft, width), 9);
+  assert.strictEqual(utils.nearestIndex(100, 1, padLeft, width), 0);
+});
+
 if (!process.exitCode) {
   console.log("All inflation calculator smoke checks passed.");
 }
