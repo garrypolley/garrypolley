@@ -137,15 +137,21 @@ check("no-loan series grows and ends above the starting balance", function () {
   almostEqual(result.employerAnnual, 3600, 0.01);
 });
 
-check("loan origination drops year-0 invested balance by the amount taken", function () {
+check("year 0 is the starting balance; first-year gain/loss is after monthly payments", function () {
   var result = utils.simulate(baseInput());
   assert.ok(result.ok);
   assert.strictEqual(result.loanTaken, 20000);
-  almostEqual(result.pointsWithLoan[0].value, 60000, 0.01);
-  almostEqual(result.pointsWithLoan[0].invested, 60000, 0.01);
-  almostEqual(result.pointsWithLoan[0].loanRemaining, 20000, 0.01);
-  almostEqual(result.pointsWithLoan[0].delta, -20000, 0.01);
+  almostEqual(result.pointsWithLoan[0].value, 80000, 0.01);
+  almostEqual(result.pointsWithoutLoan[0].value, 80000, 0.01);
+  almostEqual(result.pointsWithLoan[0].loanRemaining, 0, 0.01);
+  almostEqual(result.pointsWithLoan[0].delta, 0, 0.01);
   assert.ok(result.monthlyLoanPayment > 400);
+  assert.ok(result.pointsWithLoan[1].loanRemaining > 0);
+  assert.ok(
+    result.pointsWithLoan[1].loanRemaining < 20000,
+    "a year of monthly payments should have paid down principal"
+  );
+  assert.ok(result.pointsWithLoan[1].delta < -1);
   almostEqual(result.loanRemaining, 0, 1);
 });
 
@@ -171,7 +177,8 @@ check("loan cash misses market growth until repayments are deposited", function 
     })
   );
   assert.ok(result.ok);
-  almostEqual(result.pointsWithLoan[0].value, 50000, 0.01);
+  almostEqual(result.pointsWithLoan[0].value, 100000, 0.01);
+  almostEqual(result.pointsWithLoan[0].delta, 0, 0.01);
   almostEqual(result.endWithoutLoan, 112000, 0.05);
   almostEqual(result.endWithLoan, invested, 0.5);
   almostEqual(result.principalRepaid, 50000, 1);
@@ -293,9 +300,10 @@ check("repeating every 5 years over 30 years originates 6 loans", function () {
   assert.strictEqual(result.loanCount, 6);
   almostEqual(result.loanTaken, 120000, 1);
   almostEqual(result.loanRemaining, 0, 1);
-  almostEqual(result.pointsWithLoan[0].value, 60000, 1);
-  assert.ok(result.pointsWithLoan[5].loanRemaining > 15000);
-  assert.ok(result.pointsWithLoan[5].value < result.pointsWithoutLoan[5].value);
+  almostEqual(result.pointsWithLoan[0].value, 80000, 1);
+  almostEqual(result.pointsWithLoan[0].delta, 0, 0.01);
+  almostEqual(result.pointsWithLoan[5].loanRemaining, 0, 1);
+  assert.ok(result.pointsWithLoan[6].loanRemaining > 15000);
 });
 
 check("1-year $50k repeat cannot reborrow under the §72(p) lookback", function () {
@@ -397,7 +405,10 @@ check("repeat interval shorter than term overlaps loans", function () {
   assert.ok(result.ok);
   assert.strictEqual(result.loanCount, 3);
   almostEqual(result.loanTaken, 60000, 1);
-  assert.ok(result.pointsWithLoan[3].loanRemaining > 20000);
+  assert.ok(
+    result.pointsWithLoan[4].loanRemaining > result.pointsWithLoan[3].loanRemaining,
+    "a new loan in year 3 should raise remaining by year 4"
+  );
   assert.ok(
     result.warnings.some(function (w) {
       return /before the previous/i.test(w);

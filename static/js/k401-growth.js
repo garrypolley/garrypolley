@@ -181,6 +181,8 @@
    * Contributions and loan payments land at month-end after market growth on
    * whatever is still invested; those deposits then compound in later months.
    * Expected return is an annual effective rate. Loan APR uses APR/12.
+   * Year 0 is the starting invested balance (before the first payment).
+   * Later year-end rows are after that year's monthly growth and repayments.
    * With-loan series `.value` is the invested 401(k) (money still in the market).
    */
   function simulate(input) {
@@ -303,11 +305,11 @@
       });
     }
 
+    var pointsNo = [snapshot(0, noLoan, 0)];
+    var pointsYes = [snapshot(0, invested, 0)];
+
     if (shouldOriginate(0)) originate(0);
     recordOutstanding(0);
-
-    var pointsNo = [snapshot(0, noLoan, 0)];
-    var pointsYes = [snapshot(0, invested, outstanding())];
 
     for (var m = 1; m <= months; m++) {
       var yearIndex = Math.floor((m - 1) / 12);
@@ -329,12 +331,12 @@
       payLoans();
       recordOutstanding(m);
 
-      if (shouldOriginate(m) && m < months) originate(m);
-
       if (m % 12 === 0) {
         pointsNo.push(snapshot(m / 12, noLoan, 0));
         pointsYes.push(snapshot(m / 12, invested, outstanding()));
       }
+
+      if (shouldOriginate(m) && m < months) originate(m);
     }
 
     var di;
