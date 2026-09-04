@@ -1004,7 +1004,17 @@
 }
 
 .k401-growth .k401-repeat-toggle {
+  display: flex;
   margin: 0.5rem 0 0.75rem;
+}
+
+.k401-growth .k401-cash-note {
+  margin: -0.35rem 0 1rem;
+  max-width: 40rem;
+}
+
+.k401-growth .k401-cash-note[hidden] {
+  display: none;
 }
 
 .k401-growth .k401-tune {

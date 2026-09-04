@@ -24,6 +24,7 @@
       </select>
       <button type="button" id="k401UseMax" class="tool-button--secondary">Use IRS max</button>
     </div>
+    <p class="tool-hint">Employee and employer contributions rise 3% each year after year 1.</p>
   </div>
 
   <div class="k401-stepper">
@@ -54,7 +55,8 @@
     <div id="k401LoanFields">
       <p class="tool-hint">
         The loan leaves the market. You repay it from your paycheck; principal and interest go back
-        into the 401(k) and then earn the expected return.
+        into the 401(k) and then earn the expected return. Interest is extra after-tax cash, not free
+        market return.
       </p>
       <div class="k401-stepper">
         <label for="k401LoanAmount">Loan amount</label>
@@ -76,24 +78,34 @@
         <input id="k401LoanRepeat" type="checkbox" checked />
         Repeat this loan each time it’s paid off
       </label>
+      <label class="k401-loan-toggle k401-repeat-toggle">
+        <input id="k401CrowdOut" type="checkbox" />
+        Loan payment reduces that month’s employee contribution
+      </label>
       <p class="tool-hint">
-        Typical IRS cap is $50,000 or 50% of the vested balance, usually repaid in 5 years.
-        Repeating starts another loan of the same size when the term ends.
+        Typical IRS §72(p) cap is the lesser of 50% of the vested balance or $50,000 minus the
+        highest outstanding in the prior 12 months. Repeating starts another loan when the term
+        ends — a just-paid-off $50,000 loan usually cannot be fully reborrowed the same day.
       </p>
     </div>
   </fieldset>
 
   <p id="k401Status" class="tool-status" role="status" aria-live="polite"></p>
   <div id="k401Summary" class="tool-summary" aria-live="polite"></div>
+  <p id="k401CashNote" class="tool-hint k401-cash-note" hidden>
+    “Ahead” means extra after-tax paycheck dollars (loan interest) were deposited into the 401(k).
+    That is not free market return — take-home pay funded it.
+  </p>
 
   <div class="k401-tune" id="k401Tune">
     <p class="k401-tune-label">Slide to compare</p>
     <div class="k401-slider">
       <div class="k401-slider-head">
-        <label for="k401Return">Expected 401(k) return</label>
+        <label for="k401Return">Expected 401(k) return (annual)</label>
         <span id="k401ReturnVal">7.0%</span>
       </div>
       <input id="k401Return" type="range" min="0" max="15" step="0.5" value="7" />
+      <p class="tool-hint">Annual effective return, compounded monthly in the model.</p>
     </div>
     <div class="k401-slider" id="k401AprSliderWrap">
       <div class="k401-slider-head">
@@ -119,14 +131,14 @@
   <p class="tool-hint ic-chart-hint">Drag or hover the chart to compare both balances in any year.</p>
 
   <div id="k401TableWrap" class="ic-table-wrap k401-table-wrap" hidden>
-    <p class="tool-hint">Year-end invested 401(k) balance.</p>
+    <p class="tool-hint">Year-end plan total (invested balance plus any loan you still owe yourself).</p>
     <div class="ic-table-scroll">
       <table class="ic-table">
         <thead>
           <tr>
             <th scope="col">Year</th>
             <th scope="col">Without loan</th>
-            <th id="k401HeadWith" scope="col">With loan</th>
+            <th id="k401HeadWith" scope="col">With loan (plan total)</th>
             <th id="k401HeadLoan" scope="col">Loan remaining</th>
           </tr>
         </thead>

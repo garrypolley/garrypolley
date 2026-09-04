@@ -69,6 +69,25 @@
     return (principal * (i * factor)) / (factor - 1);
   }
 
+  var CONTRIB_COLA = 0.03;
+
+  function monthlyEffectiveRate(annualPct) {
+    if (!Number.isFinite(annualPct) || annualPct <= -100) return 0;
+    return Math.pow(1 + annualPct / 100, 1 / 12) - 1;
+  }
+
+  /**
+   * IRC §72(p): $50,000 reduced by (highest outstanding in the prior 12 months
+   * minus the current outstanding), and never more than 50% of the vested balance.
+   */
+  function irsLoanLimit(invested, currentOutstanding, highestPrior12) {
+    var vested = Math.max(0, invested) + Math.max(0, currentOutstanding);
+    var reduction = Math.max(0, (highestPrior12 || 0) - Math.max(0, currentOutstanding));
+    var dollarCap = Math.max(0, LIMITS_2026.loanMax - reduction);
+    var pctCap = vested * (LIMITS_2026.loanPct / 100);
+    return Math.min(dollarCap, pctCap);
+  }
+
   function nearestIndex(x, length, padLeft, plotWidth) {
     if (!Number.isFinite(length) || length <= 1) return 0;
     if (!Number.isFinite(plotWidth) || plotWidth <= 0) return 0;
@@ -76,6 +95,20 @@
     if (t < 0) t = 0;
     if (t > 1) t = 1;
     return Math.round(t * (length - 1));
+  }
+
+  function highestOutstandingSince(history, currentMonth, windowMonths) {
+    var highest = 0;
+    var cutoff = currentMonth - windowMonths;
+    var i;
+    var entry;
+    for (i = 0; i < history.length; i++) {
+      entry = history[i];
+      if (entry.month >= cutoff && entry.month < currentMonth && entry.outstanding > highest) {
+        highest = entry.outstanding;
+      }
+    }
+    return highest;
   }
 
   function validate(input) {
@@ -132,17 +165,21 @@
   }
 
   function snapshot(year, invested, loanRemaining) {
+    var remaining = loanRemaining || 0;
     return {
       year: year,
-      value: roundMoney(invested),
-      loanRemaining: roundMoney(loanRemaining || 0),
+      value: roundMoney(invested + remaining),
+      invested: roundMoney(invested),
+      loanRemaining: roundMoney(remaining),
     };
   }
 
   /**
    * Monthly 401(k) simulation.
    * Contributions and (if enabled) loan payments land at month-end after market growth.
+   * Expected return is an annual effective rate. Loan APR uses the usual monthly APR/12.
    * Loan interest is paid from outside the plan and deposited back into the invested balance.
+   * With-loan series `.value` is plan total: invested + loan remaining.
    */
   function simulate(input) {
     var err = validate(input);
@@ -152,9 +189,10 @@
       ? input.employerAnnual
       : employerMatch(input.employeeAnnual, input.salary, input.matchRatePct, input.matchCapPct);
     var months = input.years * 12;
-    var r = input.returnPct / 100 / 12;
+    var r = monthlyEffectiveRate(input.returnPct);
     var empM = input.employeeAnnual / 12;
     var erM = employerAnnual / 12;
+    var crowdOut = !!input.crowdOut;
 
     var loanOn = !!input.loanEnabled && input.loanAmount > 0;
     var startMonth = loanOn ? input.loanStartYear * 12 : -1;
@@ -165,14 +203,18 @@
     var noLoan = input.balance;
     var invested = input.balance;
     var loans = [];
+    var outstandingHistory = [];
     var interestPaid = 0;
     var principalRepaid = 0;
     var totalTaken = 0;
     var loanCount = 0;
-    var reducedOrigination = false;
+    var employeeContributed = 0;
+    var employeeContributedWithoutLoan = 0;
+    var employerContributed = 0;
+    var reducedByBalance = false;
+    var reducedByIrs = false;
     var skippedOrigination = false;
     var overlapping = false;
-    var capWarned = false;
     var warnings = [];
     var iLoan = (input.loanApr || 0) / 100 / 12;
     var standardPayment = loanOn ? amortizingPayment(input.loanAmount, input.loanApr, loanTermMonths) : 0;
@@ -183,27 +225,49 @@
       return sum;
     }
 
+    function recordOutstanding(month) {
+      outstandingHistory.push({ month: month, outstanding: outstanding() });
+    }
+
     function shouldOriginate(month) {
       if (!loanOn || month < startMonth) return false;
       if (!repeatOn) return month === startMonth;
       return (month - startMonth) % repeatMonths === 0;
     }
 
-    function originate() {
+    function loanDueThisMonth() {
+      var due = 0;
+      var i;
+      var loan;
+      var interest;
+      var payment;
+      for (i = 0; i < loans.length; i++) {
+        loan = loans[i];
+        if (loan.remaining <= 0 || loan.left <= 0) continue;
+        interest = loan.remaining * iLoan;
+        payment = loan.left === 1 ? loan.remaining + interest : Math.min(loan.payment, loan.remaining + interest);
+        if (payment < 0) payment = 0;
+        due += payment;
+      }
+      return due;
+    }
+
+    function originate(month) {
       if (loans.length > 0) overlapping = true;
-      var taken = Math.min(input.loanAmount, invested);
+      var current = outstanding();
+      var highest = highestOutstandingSince(outstandingHistory, month, 12);
+      var allowed = irsLoanLimit(invested, current, highest);
+      var requested = input.loanAmount;
+      var taken = Math.min(requested, invested, allowed);
       if (taken <= 0.005) {
         skippedOrigination = true;
+        if (allowed + 0.005 < requested) reducedByIrs = true;
+        else if (invested + 0.005 < requested) reducedByBalance = true;
         return;
       }
-      if (taken + 0.005 < input.loanAmount) reducedOrigination = true;
-      var vested = invested + outstanding();
-      var irsCap = Math.min(LIMITS_2026.loanMax, vested * (LIMITS_2026.loanPct / 100));
-      if (!capWarned && (taken > irsCap + 0.005 || outstanding() + taken > irsCap + 0.005)) {
-        capWarned = true;
-        warnings.push(
-          "Requested loan is above the typical IRS cap (lesser of 50% of the vested balance or $50,000). Plans vary; this is illustrative."
-        );
+      if (taken + 0.005 < requested) {
+        if (invested + 0.005 < requested) reducedByBalance = true;
+        if (allowed + 0.005 < requested) reducedByIrs = true;
       }
       loans.push({
         remaining: taken,
@@ -213,6 +277,7 @@
       invested -= taken;
       totalTaken += taken;
       loanCount += 1;
+      recordOutstanding(month);
     }
 
     function payLoans() {
@@ -224,7 +289,7 @@
         if (due < 0) due = 0;
         var principalPay = Math.min(loan.remaining, Math.max(0, due - interest));
         var interestPay = due - principalPay;
-        loan.remaining = roundMoney(loan.remaining - principalPay);
+        loan.remaining = loan.remaining - principalPay;
         if (loan.remaining < 0.005) loan.remaining = 0;
         invested += principalPay + interestPay;
         interestPaid += interestPay;
@@ -236,31 +301,55 @@
       });
     }
 
-    if (shouldOriginate(0)) originate();
+    if (shouldOriginate(0)) originate(0);
+    recordOutstanding(0);
 
     var pointsNo = [snapshot(0, noLoan, 0)];
     var pointsYes = [snapshot(0, invested, outstanding())];
 
     for (var m = 1; m <= months; m++) {
-      noLoan = noLoan * (1 + r) + empM + erM;
-      invested = invested * (1 + r) + empM + erM;
+      var yearIndex = Math.floor((m - 1) / 12);
+      var cola = Math.pow(1 + CONTRIB_COLA, yearIndex);
+      var empThis = empM * cola;
+      var erThis = erM * cola;
+
+      noLoan = noLoan * (1 + r) + empThis + erThis;
+      employeeContributedWithoutLoan += empThis;
+
+      var empLoan = empThis;
+      if (crowdOut) {
+        empLoan = Math.max(0, empThis - loanDueThisMonth());
+      }
+      invested = invested * (1 + r) + empLoan + erThis;
+      employeeContributed += empLoan;
+      employerContributed += erThis;
+
       payLoans();
-      if (shouldOriginate(m) && m < months) originate();
+      recordOutstanding(m);
 
       if (m % 12 === 0) {
         pointsNo.push(snapshot(m / 12, noLoan, 0));
         pointsYes.push(snapshot(m / 12, invested, outstanding()));
       }
+
+      if (shouldOriginate(m) && m < months) originate(m);
     }
 
     if (loanOn && outstanding() > 0.5) {
       warnings.push("The projection ends before the loan is fully repaid. Outstanding loan: " + formatMoney(outstanding(), 2) + ".");
     }
-    if (reducedOrigination) {
-      warnings.push("At least one loan was reduced to the available invested balance or typical IRS cap.");
+    if (reducedByBalance) {
+      warnings.push("At least one loan was reduced to the available invested balance.");
     }
-    if (skippedOrigination) {
+    if (reducedByIrs) {
+      warnings.push(
+        "At least one loan was reduced by the typical IRS §72(p) cap (lesser of 50% of the vested balance or $50,000 minus the highest outstanding in the prior 12 months). Plans vary; this is illustrative."
+      );
+    }
+    if (skippedOrigination && !reducedByIrs && !reducedByBalance) {
       warnings.push("At least one scheduled loan was skipped because no invested balance was available.");
+    } else if (skippedOrigination && reducedByIrs && totalTaken <= 0.005) {
+      warnings.push("A scheduled loan was skipped because the §72(p) lookback left no remaining cap.");
     }
     if (overlapping) {
       warnings.push("A new loan started before the previous one was fully repaid. Many plans allow only one outstanding loan.");
@@ -301,6 +390,9 @@
       interestPaid: roundMoney(interestPaid),
       principalRepaid: roundMoney(principalRepaid),
       loanRemaining: roundMoney(outstanding()),
+      employeeContributed: roundMoney(employeeContributed),
+      employeeContributedWithoutLoan: roundMoney(employeeContributedWithoutLoan),
+      employerContributed: roundMoney(employerContributed),
       endWithoutLoan: roundMoney(endNo),
       endWithLoan: roundMoney(endYes),
       difference: roundMoney(endYes - endNo),
@@ -318,11 +410,14 @@
     MAX_YEARS: MAX_YEARS,
     MAX_LOAN_TERM: MAX_LOAN_TERM,
     LIMITS_2026: LIMITS_2026,
+    CONTRIB_COLA: CONTRIB_COLA,
     roundMoney: roundMoney,
     formatMoney: formatMoney,
     employeeMax: employeeMax,
     employerMatch: employerMatch,
     amortizingPayment: amortizingPayment,
+    monthlyEffectiveRate: monthlyEffectiveRate,
+    irsLoanLimit: irsLoanLimit,
     nearestIndex: nearestIndex,
     validate: validate,
     simulate: simulate,
@@ -353,8 +448,10 @@
   var aprSliderWrap = document.getElementById("k401AprSliderWrap");
   var loanTermEl = document.getElementById("k401LoanTerm");
   var loanRepeatEl = document.getElementById("k401LoanRepeat");
+  var crowdOutEl = document.getElementById("k401CrowdOut");
   var statusEl = document.getElementById("k401Status");
   var summaryEl = document.getElementById("k401Summary");
+  var cashNoteEl = document.getElementById("k401CashNote");
   var chartCanvas = document.getElementById("k401Chart");
   var chartReadoutEl = document.getElementById("k401ChartReadout");
   var chartAnnounceEl = document.getElementById("k401ChartAnnounce");
@@ -376,6 +473,7 @@
     loanApr: 8,
     loanTerm: 5,
     loanRepeat: true,
+    crowdOut: false,
   };
 
   var lastResult = null;
@@ -448,6 +546,7 @@
       loanStartYear: 0,
       loanRepeat: loanRepeatEl.checked,
       loanRepeatYears: term,
+      crowdOut: !!(crowdOutEl && crowdOutEl.checked),
     };
   }
 
@@ -615,7 +714,7 @@
       noPt.year +
       "  ·  no loan " +
       utils.formatMoney(noPt.value) +
-      (yesPt ? "  ·  with loan " + utils.formatMoney(yesPt.value) : "");
+      (yesPt ? "  ·  with loan (plan total) " + utils.formatMoney(yesPt.value) : "");
     ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
     var labelW = ctx.measureText(label).width;
     var boxW = labelW + 20;
@@ -643,7 +742,7 @@
       { label: "Without loan", color: COLOR_NO, points: result.pointsWithoutLoan },
     ];
     if (result.loanEnabled) {
-      series.push({ label: "With loan", color: COLOR_YES, points: result.pointsWithLoan });
+      series.push({ label: "With loan (plan total)", color: COLOR_YES, points: result.pointsWithLoan });
     }
 
     var cssW = chartCanvas.clientWidth || 720;
@@ -709,7 +808,7 @@
       noPt.year +
       ": without loan " +
       utils.formatMoney(noPt.value) +
-      (yesPt ? "; with loan " + utils.formatMoney(yesPt.value) : "") +
+      (yesPt ? "; with loan (plan total) " + utils.formatMoney(yesPt.value) : "") +
       (yesPt && yesPt.loanRemaining > 0
         ? "; loan remaining " + utils.formatMoney(yesPt.loanRemaining, 0)
         : "");
@@ -802,6 +901,7 @@
     if (!result.ok) {
       setStatus(result.error, true);
       summaryEl.textContent = "";
+      if (cashNoteEl) cashNoteEl.hidden = true;
       tableWrap.hidden = true;
       drawChart(null);
       return;
@@ -813,7 +913,7 @@
     summaryEl.textContent = "";
     summaryEl.appendChild(summaryItem("Without loan", utils.formatMoney(result.endWithoutLoan)));
     if (result.loanEnabled) {
-      summaryEl.appendChild(summaryItem("With loan", utils.formatMoney(result.endWithLoan)));
+      summaryEl.appendChild(summaryItem("With loan (plan total)", utils.formatMoney(result.endWithLoan)));
       var delta = result.difference;
       var deltaLabel = delta >= 0 ? "Loan ends ahead by" : "Loan ends behind by";
       summaryEl.appendChild(summaryItem(deltaLabel, utils.formatMoney(Math.abs(delta))));
@@ -825,11 +925,12 @@
         summaryEl.appendChild(summaryItem("Total borrowed", utils.formatMoney(result.loanTaken)));
       }
       summaryEl.appendChild(
-        summaryItem("Interest paid to yourself", utils.formatMoney(result.interestPaid, 2))
+        summaryItem("Interest from paycheck", utils.formatMoney(result.interestPaid, 2))
       );
     } else if (result.employerAnnual > 0) {
       summaryEl.appendChild(summaryItem("Employer / year", utils.formatMoney(result.employerAnnual)));
     }
+    if (cashNoteEl) cashNoteEl.hidden = !result.loanEnabled;
 
     drawChart(result);
     renderTable(result);
@@ -853,6 +954,7 @@
     loanAprEl.value = String(DEFAULTS.loanApr);
     loanTermEl.value = String(DEFAULTS.loanTerm);
     loanRepeatEl.checked = DEFAULTS.loanRepeat;
+    if (crowdOutEl) crowdOutEl.checked = DEFAULTS.crowdOut;
     setLoanFieldsOpen(DEFAULTS.loanOn);
     scrubIndex = null;
     render();
@@ -872,6 +974,7 @@
     scheduleRender();
   });
   loanRepeatEl.addEventListener("change", scheduleRender);
+  if (crowdOutEl) crowdOutEl.addEventListener("change", scheduleRender);
 
   root.querySelectorAll(".k401-nudge").forEach(function (btn) {
     btn.addEventListener("click", function () {
