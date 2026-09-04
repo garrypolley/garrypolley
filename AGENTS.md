@@ -90,7 +90,7 @@ hugo --gc --minify  # production-like build → public/
 - Front matter: `title`, `slug`, `date`, `short`, `draft`
 - Permalinks: `/tool/:slug/`
 - Keep interactive UI in shortcodes and/or `static/js/` + `static/css/tool.css`
-- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`), GIF Slicer (`{{< gifSlicer >}}` — GIF/video → sliced captioned GIF), Inflation Calculator (`{{< inflationCalculator >}}` — BLS CPI-U annual, client-side)
+- Existing tools: Suko Solver (`{{< sukoSolver >}}`), SVG to PNG (`{{< svgToPng >}}`), Interest Return (`{{< interestReturn >}}`), GIF Slicer (`{{< gifSlicer >}}` — GIF/video → sliced captioned GIF), Inflation Calculator (`{{< inflationCalculator >}}` — BLS CPI-U annual, client-side), 401(k) Growth (`{{< k401Growth >}}` — contributions + loan vs no-loan)
 - Tools are navigable via the Tools menu; they are not included in `mainSections` (home feed)
 
 ### Games (`content/game/`)
@@ -128,6 +128,7 @@ node scripts/smoke-interest-return.js  # Interest Return calculator smoke tests
 node scripts/smoke-sumswipe.js         # SumSwipe puzzle helper smoke tests
 node scripts/smoke-gif-slicer.js       # GIF slicer helper smoke tests
 node scripts/smoke-inflation-calculator.js  # Inflation calculator (BLS CPI) smoke tests
+node scripts/smoke-k401-growth.js          # 401(k) growth + loan comparison smoke tests
 node scripts/fetch-cpi-data.js         # refresh static/data/cpi-u-annual.json from BLS API
 node scripts/build-sumswipe-dict.js    # rebuild ENABLE word list (optional)
 ```
