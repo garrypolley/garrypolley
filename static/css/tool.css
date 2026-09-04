@@ -1164,3 +1164,13 @@
   font-weight: 600;
   background: #f0f7fa;
 }
+
+.k401-growth .ic-table td.is-gain {
+  color: #1a7f37;
+  font-variant-numeric: tabular-nums;
+}
+
+.k401-growth .ic-table td.is-loss {
+  color: #b42318;
+  font-variant-numeric: tabular-nums;
+}

@@ -137,15 +137,69 @@ check("no-loan series grows and ends above the starting balance", function () {
   almostEqual(result.employerAnnual, 3600, 0.01);
 });
 
-check("loan origination keeps year-0 plan total equal to the starting balance", function () {
+check("loan origination drops year-0 invested balance by the amount taken", function () {
   var result = utils.simulate(baseInput());
   assert.ok(result.ok);
   assert.strictEqual(result.loanTaken, 20000);
-  almostEqual(result.pointsWithLoan[0].value, 80000, 0.01);
+  almostEqual(result.pointsWithLoan[0].value, 60000, 0.01);
   almostEqual(result.pointsWithLoan[0].invested, 60000, 0.01);
   almostEqual(result.pointsWithLoan[0].loanRemaining, 20000, 0.01);
+  almostEqual(result.pointsWithLoan[0].delta, -20000, 0.01);
   assert.ok(result.monthlyLoanPayment > 400);
   almostEqual(result.loanRemaining, 0, 1);
+});
+
+check("loan cash misses market growth until repayments are deposited", function () {
+  var monthly = utils.monthlyEffectiveRate(12);
+  var payment = 50000 / 12;
+  var invested = 50000;
+  var m;
+  for (m = 1; m <= 12; m++) {
+    invested = invested * (1 + monthly) + payment;
+  }
+  var result = utils.simulate(
+    baseInput({
+      balance: 100000,
+      employeeAnnual: 0,
+      employerAnnual: 0,
+      salary: 0,
+      returnPct: 12,
+      years: 1,
+      loanAmount: 50000,
+      loanApr: 0,
+      loanTermYears: 1,
+    })
+  );
+  assert.ok(result.ok);
+  almostEqual(result.pointsWithLoan[0].value, 50000, 0.01);
+  almostEqual(result.endWithoutLoan, 112000, 0.05);
+  almostEqual(result.endWithLoan, invested, 0.5);
+  almostEqual(result.principalRepaid, 50000, 1);
+  assert.ok(
+    result.endWithLoan < result.endWithoutLoan - 1000,
+    "outstanding loan cash should miss a year of compounding"
+  );
+  assert.ok(result.endWithLoan > 100000, "repayments should return to the 401(k) and then grow");
+  almostEqual(result.pointsWithLoan[1].delta, result.endWithLoan - result.endWithoutLoan, 0.05);
+});
+
+check("higher market return widens the invested gap while the loan is out", function () {
+  var shared = {
+    employeeAnnual: 0,
+    employerAnnual: 0,
+    salary: 0,
+    loanAmount: 20000,
+    loanApr: 0,
+    loanTermYears: 5,
+    years: 5,
+  };
+  var low = utils.simulate(baseInput(Object.assign({ returnPct: 3 }, shared)));
+  var high = utils.simulate(baseInput(Object.assign({ returnPct: 12 }, shared)));
+  assert.ok(low.ok && high.ok);
+  assert.ok(
+    high.difference < low.difference,
+    "a higher return should cost more while $20k is out of the market"
+  );
 });
 
 check("loan interest is repaid into the account over the term", function () {
@@ -239,9 +293,9 @@ check("repeating every 5 years over 30 years originates 6 loans", function () {
   assert.strictEqual(result.loanCount, 6);
   almostEqual(result.loanTaken, 120000, 1);
   almostEqual(result.loanRemaining, 0, 1);
-  almostEqual(result.pointsWithLoan[0].value, 80000, 1);
-  almostEqual(result.pointsWithLoan[5].loanRemaining, 0, 1);
-  assert.ok(result.pointsWithLoan[6].loanRemaining > 15000);
+  almostEqual(result.pointsWithLoan[0].value, 60000, 1);
+  assert.ok(result.pointsWithLoan[5].loanRemaining > 15000);
+  assert.ok(result.pointsWithLoan[5].value < result.pointsWithoutLoan[5].value);
 });
 
 check("1-year $50k repeat cannot reborrow under the §72(p) lookback", function () {
@@ -343,8 +397,7 @@ check("repeat interval shorter than term overlaps loans", function () {
   assert.ok(result.ok);
   assert.strictEqual(result.loanCount, 3);
   almostEqual(result.loanTaken, 60000, 1);
-  // Year 3 snapshots before the new loan originates; year 4 still has overlap.
-  assert.ok(result.pointsWithLoan[4].loanRemaining > 20000);
+  assert.ok(result.pointsWithLoan[3].loanRemaining > 20000);
   assert.ok(
     result.warnings.some(function (w) {
       return /before the previous/i.test(w);

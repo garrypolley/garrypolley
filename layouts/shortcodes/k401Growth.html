@@ -123,23 +123,24 @@
       height="360"
       role="application"
       tabindex="0"
-      aria-label="401(k) balance with and without a loan. Drag or hover to inspect a year."
+      aria-label="Invested 401(k) balance with and without a loan. Drag or hover to inspect a year."
     ></canvas>
     <p id="k401ChartReadout" class="ic-chart-readout" hidden></p>
     <p id="k401ChartAnnounce" class="ic-chart-announce" aria-live="polite"></p>
   </div>
-  <p class="tool-hint ic-chart-hint">Drag or hover the chart to compare both balances in any year.</p>
+  <p class="tool-hint ic-chart-hint">Drag or hover the chart to compare the invested 401(k) in any year. The loan cash is out of the market until you pay it back.</p>
 
   <div id="k401TableWrap" class="ic-table-wrap k401-table-wrap" hidden>
-    <p class="tool-hint">Year-end plan total (invested balance plus any loan you still owe yourself).</p>
+    <p class="tool-hint">Year-end invested 401(k). Gain/loss is with-loan minus without-loan — the compounding impact of cash sitting outside the market, plus interest you paid back in.</p>
     <div class="ic-table-scroll">
       <table class="ic-table">
         <thead>
           <tr>
             <th scope="col">Year</th>
             <th scope="col">Without loan</th>
-            <th id="k401HeadWith" scope="col">With loan (plan total)</th>
+            <th id="k401HeadWith" scope="col">With loan (invested)</th>
             <th id="k401HeadLoan" scope="col">Loan remaining</th>
+            <th id="k401HeadDelta" scope="col">Gain / loss</th>
           </tr>
         </thead>
         <tbody id="k401TableBody"></tbody>

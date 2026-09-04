@@ -168,7 +168,7 @@
     var remaining = loanRemaining || 0;
     return {
       year: year,
-      value: roundMoney(invested + remaining),
+      value: roundMoney(invested),
       invested: roundMoney(invested),
       loanRemaining: roundMoney(remaining),
     };
@@ -176,10 +176,12 @@
 
   /**
    * Monthly 401(k) simulation.
-   * Contributions and (if enabled) loan payments land at month-end after market growth.
-   * Expected return is an annual effective rate. Loan APR uses the usual monthly APR/12.
-   * Loan interest is paid from outside the plan and deposited back into the invested balance.
-   * With-loan series `.value` is plan total: invested + loan remaining.
+   * A loan is subtracted from the invested balance immediately, so that cash
+   * does not earn the market return until principal (and interest) are paid back.
+   * Contributions and loan payments land at month-end after market growth on
+   * whatever is still invested; those deposits then compound in later months.
+   * Expected return is an annual effective rate. Loan APR uses APR/12.
+   * With-loan series `.value` is the invested 401(k) (money still in the market).
    */
   function simulate(input) {
     var err = validate(input);
@@ -327,12 +329,17 @@
       payLoans();
       recordOutstanding(m);
 
+      if (shouldOriginate(m) && m < months) originate(m);
+
       if (m % 12 === 0) {
         pointsNo.push(snapshot(m / 12, noLoan, 0));
         pointsYes.push(snapshot(m / 12, invested, outstanding()));
       }
+    }
 
-      if (shouldOriginate(m) && m < months) originate(m);
+    var di;
+    for (di = 0; di < pointsYes.length; di++) {
+      pointsYes[di].delta = roundMoney(pointsYes[di].value - pointsNo[di].value);
     }
 
     if (loanOn && outstanding() > 0.5) {
@@ -507,6 +514,12 @@
   function formatPct(n) {
     if (!Number.isFinite(n)) return "—";
     return n.toFixed(1) + "%";
+  }
+
+  function formatDelta(n) {
+    if (!Number.isFinite(n)) return "—";
+    if (Math.abs(n) < 0.005) return utils.formatMoney(0);
+    return (n > 0 ? "+" : "−") + utils.formatMoney(Math.abs(n));
   }
 
   function syncSliderLabels() {
@@ -714,7 +727,12 @@
       noPt.year +
       "  ·  no loan " +
       utils.formatMoney(noPt.value) +
-      (yesPt ? "  ·  with loan (plan total) " + utils.formatMoney(yesPt.value) : "");
+      (yesPt
+        ? "  ·  with loan " +
+          utils.formatMoney(yesPt.value) +
+          "  ·  " +
+          formatDelta(yesPt.delta != null ? yesPt.delta : yesPt.value - noPt.value)
+        : "");
     ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
     var labelW = ctx.measureText(label).width;
     var boxW = labelW + 20;
@@ -742,7 +760,7 @@
       { label: "Without loan", color: COLOR_NO, points: result.pointsWithoutLoan },
     ];
     if (result.loanEnabled) {
-      series.push({ label: "With loan (plan total)", color: COLOR_YES, points: result.pointsWithLoan });
+      series.push({ label: "With loan (invested)", color: COLOR_YES, points: result.pointsWithLoan });
     }
 
     var cssW = chartCanvas.clientWidth || 720;
@@ -808,7 +826,10 @@
       noPt.year +
       ": without loan " +
       utils.formatMoney(noPt.value) +
-      (yesPt ? "; with loan (plan total) " + utils.formatMoney(yesPt.value) : "") +
+      (yesPt ? "; with loan " + utils.formatMoney(yesPt.value) : "") +
+      (yesPt
+        ? "; " + formatDelta(yesPt.delta != null ? yesPt.delta : yesPt.value - noPt.value)
+        : "") +
       (yesPt && yesPt.loanRemaining > 0
         ? "; loan remaining " + utils.formatMoney(yesPt.loanRemaining, 0)
         : "");
@@ -876,11 +897,17 @@
         utils.formatMoney(noPt.value) +
         "</td>";
       if (result.loanEnabled) {
+        var delta = yesPt.delta != null ? yesPt.delta : yesPt.value - noPt.value;
+        var deltaClass = delta > 0.005 ? "is-gain" : delta < -0.005 ? "is-loss" : "";
         cells +=
           "<td>" +
           utils.formatMoney(yesPt.value) +
           "</td><td>" +
           (yesPt.loanRemaining > 0 ? utils.formatMoney(yesPt.loanRemaining) : "—") +
+          "</td><td" +
+          (deltaClass ? ' class="' + deltaClass + '"' : "") +
+          ">" +
+          formatDelta(delta) +
           "</td>";
       }
       tr.innerHTML = cells;
@@ -889,8 +916,10 @@
     tableWrap.hidden = false;
     var withHead = document.getElementById("k401HeadWith");
     var loanHead = document.getElementById("k401HeadLoan");
+    var deltaHead = document.getElementById("k401HeadDelta");
     if (withHead) withHead.hidden = !result.loanEnabled;
     if (loanHead) loanHead.hidden = !result.loanEnabled;
+    if (deltaHead) deltaHead.hidden = !result.loanEnabled;
   }
 
   function render() {
@@ -913,7 +942,7 @@
     summaryEl.textContent = "";
     summaryEl.appendChild(summaryItem("Without loan", utils.formatMoney(result.endWithoutLoan)));
     if (result.loanEnabled) {
-      summaryEl.appendChild(summaryItem("With loan (plan total)", utils.formatMoney(result.endWithLoan)));
+      summaryEl.appendChild(summaryItem("With loan (invested)", utils.formatMoney(result.endWithLoan)));
       var delta = result.difference;
       var deltaLabel = delta >= 0 ? "Loan ends ahead by" : "Loan ends behind by";
       summaryEl.appendChild(summaryItem(deltaLabel, utils.formatMoney(Math.abs(delta))));
