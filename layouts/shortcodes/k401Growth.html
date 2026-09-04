@@ -71,9 +71,21 @@
         <label for="k401LoanStart">Start after year</label>
         <input id="k401LoanStart" type="number" min="0" max="49" step="1" value="0" />
       </div>
+      <div class="tool-field tool-field--inline k401-repeat-row">
+        <label class="k401-loan-toggle" for="k401LoanRepeat">
+          <input id="k401LoanRepeat" type="checkbox" checked />
+          Repeat this loan
+        </label>
+      </div>
+      <div id="k401RepeatFields" class="tool-field tool-field--inline">
+        <label for="k401LoanRepeatYears">Every (years)</label>
+        <input id="k401LoanRepeatYears" type="number" min="1" max="50" step="1" value="5" />
+        <button type="button" id="k401RepeatMatchTerm" class="tool-button--secondary">Use loan term</button>
+      </div>
       <p class="tool-hint">
         Typical IRS cap is the lesser of 50% of the vested balance or $50,000, repaid within 5 years
-        (up to 15 for a primary home). 0 = take the loan now.
+        (up to 15 for a primary home). 0 = take the first loan now. Repeating takes another loan of the
+        same size on that cycle; if the interval is shorter than the term, loans can overlap.
       </p>
     </div>
   </fieldset>

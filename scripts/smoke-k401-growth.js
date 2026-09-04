@@ -161,6 +161,62 @@ check("zero-interest loan is repaid evenly and fully", function () {
   almostEqual(result.interestPaid, 0, 0.01);
   almostEqual(result.endWithLoan, 80000, 1);
   almostEqual(result.endWithoutLoan, 80000, 1);
+  assert.strictEqual(result.loanCount, 1);
+});
+
+check("repeating every 5 years over 30 years originates 6 loans", function () {
+  var result = utils.simulate(
+    baseInput({
+      loanRepeat: true,
+      loanRepeatYears: 5,
+      loanTermYears: 5,
+      years: 30,
+    })
+  );
+  assert.ok(result.ok);
+  assert.strictEqual(result.loanCount, 6);
+  almostEqual(result.loanTaken, 120000, 1);
+  almostEqual(result.loanRemaining, 0, 1);
+  // Dips at each origination year (0, 5, 10, …).
+  almostEqual(result.pointsWithLoan[0].value, 60000, 1);
+  assert.ok(result.pointsWithLoan[5].loanRemaining > 15000);
+  assert.ok(result.pointsWithLoan[5].value < result.pointsWithoutLoan[5].value);
+});
+
+check("repeat interval shorter than term overlaps loans", function () {
+  var result = utils.simulate(
+    baseInput({
+      loanRepeat: true,
+      loanRepeatYears: 3,
+      loanTermYears: 5,
+      years: 9,
+      returnPct: 0,
+      employeeAnnual: 0,
+      salary: 0,
+    })
+  );
+  assert.ok(result.ok);
+  assert.strictEqual(result.loanCount, 3);
+  almostEqual(result.loanTaken, 60000, 1);
+  assert.ok(result.pointsWithLoan[3].loanRemaining > 20000);
+  assert.ok(
+    result.warnings.some(function (w) {
+      return /before the previous/i.test(w);
+    })
+  );
+});
+
+check("repeat does not originate a loan on the final year", function () {
+  var result = utils.simulate(
+    baseInput({
+      loanRepeat: true,
+      loanRepeatYears: 5,
+      loanTermYears: 5,
+      years: 5,
+    })
+  );
+  assert.ok(result.ok);
+  assert.strictEqual(result.loanCount, 1);
 });
 
 if (!process.exitCode) {

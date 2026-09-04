@@ -116,6 +116,11 @@
       if (!Number.isFinite(input.loanStartYear) || input.loanStartYear !== Math.floor(input.loanStartYear) || input.loanStartYear < 0 || input.loanStartYear >= input.years) {
         return "Loan start year must be from 0 (now) through " + (input.years - 1) + ".";
       }
+      if (input.loanRepeat) {
+        if (!Number.isFinite(input.loanRepeatYears) || input.loanRepeatYears !== Math.floor(input.loanRepeatYears) || input.loanRepeatYears < 1 || input.loanRepeatYears > MAX_YEARS) {
+          return "Loan repeat interval must be a whole number from 1 to " + MAX_YEARS + " years.";
+        }
+      }
     }
     return null;
   }
@@ -151,82 +156,111 @@
     var loanOn = !!input.loanEnabled && input.loanAmount > 0;
     var startMonth = loanOn ? input.loanStartYear * 12 : -1;
     var loanTermMonths = loanOn ? input.loanTermYears * 12 : 0;
+    var repeatOn = loanOn && !!input.loanRepeat;
+    var repeatMonths = repeatOn ? input.loanRepeatYears * 12 : 0;
 
     var noLoan = input.balance;
     var invested = input.balance;
-    var loanBal = 0;
-    var payment = 0;
-    var paymentsLeft = 0;
-    var taken = 0;
+    var loans = [];
     var interestPaid = 0;
     var principalRepaid = 0;
+    var totalTaken = 0;
+    var loanCount = 0;
+    var reducedOrigination = false;
+    var skippedOrigination = false;
+    var overlapping = false;
+    var capWarned = false;
     var warnings = [];
+    var iLoan = (input.loanApr || 0) / 100 / 12;
+    var standardPayment = loanOn ? amortizingPayment(input.loanAmount, input.loanApr, loanTermMonths) : 0;
 
-    if (loanOn && startMonth === 0) {
-      taken = Math.min(input.loanAmount, invested);
-      if (taken < input.loanAmount) {
-        warnings.push("Loan reduced to the available 401(k) balance at origination.");
-      }
-      invested -= taken;
-      loanBal = taken;
-      paymentsLeft = loanTermMonths;
-      payment = amortizingPayment(taken, input.loanApr, loanTermMonths);
-      var irsCap = Math.min(LIMITS_2026.loanMax, input.balance * (LIMITS_2026.loanPct / 100));
-      if (input.loanAmount > irsCap + 0.005) {
-        warnings.push(
-          "Requested loan is above the typical IRS cap (lesser of 50% of the current balance or $50,000). Plans vary; this is illustrative."
-        );
-      }
+    function outstanding() {
+      var sum = 0;
+      for (var i = 0; i < loans.length; i++) sum += loans[i].remaining;
+      return sum;
     }
 
-    var pointsNo = [snapshot(0, noLoan, 0)];
-    var pointsYes = [snapshot(0, invested, loanBal)];
+    function shouldOriginate(month) {
+      if (!loanOn || month < startMonth) return false;
+      if (!repeatOn) return month === startMonth;
+      return (month - startMonth) % repeatMonths === 0;
+    }
 
-    var iLoan = (input.loanApr || 0) / 100 / 12;
+    function originate() {
+      if (loans.length > 0) overlapping = true;
+      var taken = Math.min(input.loanAmount, invested);
+      if (taken <= 0.005) {
+        skippedOrigination = true;
+        return;
+      }
+      if (taken + 0.005 < input.loanAmount) reducedOrigination = true;
+      var vested = invested + outstanding();
+      var irsCap = Math.min(LIMITS_2026.loanMax, vested * (LIMITS_2026.loanPct / 100));
+      if (!capWarned && (taken > irsCap + 0.005 || outstanding() + taken > irsCap + 0.005)) {
+        capWarned = true;
+        warnings.push(
+          "Requested loan is above the typical IRS cap (lesser of 50% of the vested balance or $50,000). Plans vary; this is illustrative."
+        );
+      }
+      loans.push({
+        remaining: taken,
+        payment: amortizingPayment(taken, input.loanApr, loanTermMonths),
+        left: loanTermMonths,
+      });
+      invested -= taken;
+      totalTaken += taken;
+      loanCount += 1;
+    }
+
+    function payLoans() {
+      for (var i = 0; i < loans.length; i++) {
+        var loan = loans[i];
+        if (loan.remaining <= 0 || loan.left <= 0) continue;
+        var interest = loan.remaining * iLoan;
+        var due = loan.left === 1 ? loan.remaining + interest : Math.min(loan.payment, loan.remaining + interest);
+        if (due < 0) due = 0;
+        var principalPay = Math.min(loan.remaining, Math.max(0, due - interest));
+        var interestPay = due - principalPay;
+        loan.remaining = roundMoney(loan.remaining - principalPay);
+        if (loan.remaining < 0.005) loan.remaining = 0;
+        invested += principalPay + interestPay;
+        interestPaid += interestPay;
+        principalRepaid += principalPay;
+        loan.left -= 1;
+      }
+      loans = loans.filter(function (loan) {
+        return loan.remaining > 0 && loan.left > 0;
+      });
+    }
+
+    if (shouldOriginate(0)) originate();
+
+    var pointsNo = [snapshot(0, noLoan, 0)];
+    var pointsYes = [snapshot(0, invested, outstanding())];
 
     for (var m = 1; m <= months; m++) {
       noLoan = noLoan * (1 + r) + empM + erM;
       invested = invested * (1 + r) + empM + erM;
-
-      if (loanBal > 0 && paymentsLeft > 0) {
-        var interest = loanBal * iLoan;
-        var due = paymentsLeft === 1 ? loanBal + interest : Math.min(payment, loanBal + interest);
-        if (due < 0) due = 0;
-        var principalPay = Math.min(loanBal, Math.max(0, due - interest));
-        var interestPay = due - principalPay;
-        loanBal = roundMoney(loanBal - principalPay);
-        if (loanBal < 0.005) loanBal = 0;
-        invested += principalPay + interestPay;
-        interestPaid += interestPay;
-        principalRepaid += principalPay;
-        paymentsLeft -= 1;
-      }
-
-      if (loanOn && startMonth === m && startMonth > 0 && taken === 0) {
-        taken = Math.min(input.loanAmount, invested);
-        if (taken < input.loanAmount) {
-          warnings.push("Loan reduced to the available 401(k) balance at origination.");
-        }
-        invested -= taken;
-        loanBal = taken;
-        paymentsLeft = loanTermMonths;
-        payment = amortizingPayment(taken, input.loanApr, loanTermMonths);
-        var capThen = Math.min(LIMITS_2026.loanMax, (invested + taken) * (LIMITS_2026.loanPct / 100));
-        if (input.loanAmount > capThen + 0.005) {
-          warnings.push(
-            "Requested loan is above the typical IRS cap (lesser of 50% of the then-current balance or $50,000). Plans vary; this is illustrative."
-          );
-        }
-      }
+      payLoans();
+      if (shouldOriginate(m) && m < months) originate();
 
       if (m % 12 === 0) {
         pointsNo.push(snapshot(m / 12, noLoan, 0));
-        pointsYes.push(snapshot(m / 12, invested, loanBal));
+        pointsYes.push(snapshot(m / 12, invested, outstanding()));
       }
     }
 
-    if (loanOn && loanBal > 0.5) {
-      warnings.push("The projection ends before the loan is fully repaid. Outstanding loan: " + formatMoney(loanBal, 2) + ".");
+    if (loanOn && outstanding() > 0.5) {
+      warnings.push("The projection ends before the loan is fully repaid. Outstanding loan: " + formatMoney(outstanding(), 2) + ".");
+    }
+    if (reducedOrigination) {
+      warnings.push("At least one loan was reduced to the available invested balance or typical IRS cap.");
+    }
+    if (skippedOrigination) {
+      warnings.push("At least one scheduled loan was skipped because no invested balance was available.");
+    }
+    if (overlapping) {
+      warnings.push("A new loan started before the previous one was fully repaid. Many plans allow only one outstanding loan.");
     }
 
     var empLimit = employeeMax(input.ageBand || "base");
@@ -258,11 +292,12 @@
     return {
       ok: true,
       employerAnnual: employerAnnual,
-      monthlyLoanPayment: loanOn && taken > 0 ? roundMoney(payment) : 0,
-      loanTaken: roundMoney(taken),
+      monthlyLoanPayment: loanOn && loanCount > 0 ? roundMoney(standardPayment) : 0,
+      loanTaken: roundMoney(totalTaken),
+      loanCount: loanCount,
       interestPaid: roundMoney(interestPaid),
       principalRepaid: roundMoney(principalRepaid),
-      loanRemaining: roundMoney(loanBal),
+      loanRemaining: roundMoney(outstanding()),
       endWithoutLoan: roundMoney(endNo),
       endWithLoan: roundMoney(endYes),
       difference: roundMoney(endYes - endNo),
@@ -314,6 +349,9 @@
   var loanAprEl = document.getElementById("k401LoanApr");
   var loanTermEl = document.getElementById("k401LoanTerm");
   var loanStartEl = document.getElementById("k401LoanStart");
+  var loanRepeatEl = document.getElementById("k401LoanRepeat");
+  var loanRepeatYearsEl = document.getElementById("k401LoanRepeatYears");
+  var repeatFields = document.getElementById("k401RepeatFields");
   var statusEl = document.getElementById("k401Status");
   var summaryEl = document.getElementById("k401Summary");
   var matchNoteEl = document.getElementById("k401MatchNote");
@@ -340,6 +378,8 @@
     loanApr: 8,
     loanTerm: 5,
     loanStart: 0,
+    loanRepeat: true,
+    loanRepeatYears: 5,
   };
 
   var lastResult = null;
@@ -368,6 +408,12 @@
   function setLoanFieldsOpen(on) {
     if (!loanFields) return;
     loanFields.hidden = !on;
+    setRepeatFieldsOpen(on && loanRepeatEl.checked);
+  }
+
+  function setRepeatFieldsOpen(on) {
+    if (!repeatFields) return;
+    repeatFields.hidden = !on;
   }
 
   function readInput() {
@@ -385,6 +431,8 @@
       loanApr: parseNumber(loanAprEl, NaN),
       loanTermYears: parseIntField(loanTermEl, NaN),
       loanStartYear: parseIntField(loanStartEl, NaN),
+      loanRepeat: loanRepeatEl.checked,
+      loanRepeatYears: parseIntField(loanRepeatYearsEl, NaN),
     };
   }
 
@@ -771,6 +819,10 @@
       summaryEl.appendChild(
         summaryItem("Monthly loan payment", utils.formatMoney(result.monthlyLoanPayment, 2))
       );
+      if (result.loanCount > 1) {
+        summaryEl.appendChild(summaryItem("Loans taken", String(result.loanCount)));
+        summaryEl.appendChild(summaryItem("Total borrowed", utils.formatMoney(result.loanTaken)));
+      }
       summaryEl.appendChild(
         summaryItem("Interest paid to yourself", utils.formatMoney(result.interestPaid, 2))
       );
@@ -802,6 +854,8 @@
     loanAprEl.value = String(DEFAULTS.loanApr);
     loanTermEl.value = String(DEFAULTS.loanTerm);
     loanStartEl.value = String(DEFAULTS.loanStart);
+    loanRepeatEl.checked = DEFAULTS.loanRepeat;
+    loanRepeatYearsEl.value = String(DEFAULTS.loanRepeatYears);
     setLoanFieldsOpen(DEFAULTS.loanOn);
     scrubIndex = null;
     render();
@@ -828,6 +882,14 @@
     setLoanFieldsOpen(loanOnEl.checked);
     scheduleRender();
   });
+  loanRepeatEl.addEventListener("change", function () {
+    setRepeatFieldsOpen(loanOnEl.checked && loanRepeatEl.checked);
+    scheduleRender();
+  });
+  document.getElementById("k401RepeatMatchTerm").addEventListener("click", function () {
+    loanRepeatYearsEl.value = String(parseIntField(loanTermEl, DEFAULTS.loanTerm));
+    scheduleRender();
+  });
 
   [
     balanceEl,
@@ -841,6 +903,7 @@
     loanAprEl,
     loanTermEl,
     loanStartEl,
+    loanRepeatYearsEl,
   ].forEach(function (el) {
     el.addEventListener("input", scheduleRender);
     el.addEventListener("change", scheduleRender);

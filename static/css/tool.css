@@ -959,12 +959,8 @@
   padding: 0 0.35rem;
 }
 
-.k401-growth .k401-loan-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-weight: 600;
-  cursor: pointer;
+.k401-growth .k401-repeat-row {
+  margin-top: 0.25rem;
 }
 
 .k401-growth .ic-chart-wrap {
