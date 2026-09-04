@@ -939,3 +939,109 @@
 .inflation-calculator .ic-chart-hint {
   margin-top: 0.35rem;
 }
+
+.k401-growth .tool-field--inline input[type="number"] {
+  width: 8rem;
+}
+
+.k401-growth .k401-max-actions {
+  margin-top: -0.25rem;
+}
+
+.k401-growth .k401-loan {
+  margin: 1.25rem 0 1rem;
+  padding: 0.75rem 1rem 0.25rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.k401-growth .k401-loan legend {
+  padding: 0 0.35rem;
+}
+
+.k401-growth .k401-loan-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.k401-growth .ic-chart-wrap {
+  position: relative;
+}
+
+.k401-growth .ic-chart-wrap canvas {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.k401-growth .ic-chart-readout {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid #ddd;
+  background: #f0f7fa;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a5f7a;
+}
+
+.k401-growth .ic-chart-readout[hidden] {
+  display: none;
+}
+
+.k401-growth .ic-chart-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.k401-growth .ic-chart-hint {
+  margin-top: 0.35rem;
+}
+
+.k401-growth .ic-table-wrap {
+  margin: 1rem 0 1.25rem;
+}
+
+.k401-growth .ic-table-scroll {
+  max-height: 22rem;
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.k401-growth .ic-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.k401-growth .ic-table th,
+.k401-growth .ic-table td {
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.k401-growth .ic-table th {
+  position: sticky;
+  top: 0;
+  background: #f7f7f7;
+  font-weight: 600;
+}
+
+.k401-growth .ic-table th[hidden] {
+  display: none;
+}
+
+.k401-growth .ic-table tr.is-endpoint td {
+  font-weight: 600;
+  background: #f0f7fa;
+}

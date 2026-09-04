@@ -1,0 +1,120 @@
+<div class="tool k401-growth" id="k401GrowthTool">
+  <div class="tool-field tool-field--inline">
+    <label for="k401Balance">Current balance ($)</label>
+    <input id="k401Balance" type="number" min="0" max="1000000000000" step="100" value="80000" />
+  </div>
+  <div class="tool-field tool-field--inline">
+    <label for="k401Salary">Salary ($ / year)</label>
+    <input id="k401Salary" type="number" min="0" max="1000000000000" step="1000" value="120000" />
+  </div>
+  <div class="tool-field tool-field--inline">
+    <label for="k401Employee">Employee contribution ($ / year)</label>
+    <input id="k401Employee" type="number" min="0" max="1000000000000" step="100" value="24500" />
+  </div>
+  <div class="tool-field tool-field--inline">
+    <label for="k401AgeBand">Age band (2026 IRS max)</label>
+    <select id="k401AgeBand">
+      <option value="base" selected>Under 50 — $24,500</option>
+      <option value="catchup">50–59 or 64+ — $32,500</option>
+      <option value="super">Ages 60–63 — $35,750</option>
+    </select>
+  </div>
+  <div class="tool-actions k401-max-actions">
+    <button type="button" class="tool-button--secondary" data-k401-max="base">Max $24,500</button>
+    <button type="button" class="tool-button--secondary" data-k401-max="catchup">Age 50+ $32,500</button>
+    <button type="button" class="tool-button--secondary" data-k401-max="super">Ages 60–63 $35,750</button>
+  </div>
+  <div class="tool-field tool-field--inline">
+    <label for="k401MatchRate">Employer match (%)</label>
+    <input id="k401MatchRate" type="number" min="0" max="100" step="1" value="50" />
+  </div>
+  <div class="tool-field tool-field--inline">
+    <label for="k401MatchCap">…of the first % of salary</label>
+    <input id="k401MatchCap" type="number" min="0" max="100" step="1" value="6" />
+  </div>
+  <p id="k401MatchNote" class="tool-hint"></p>
+  <div class="tool-field tool-field--inline">
+    <label for="k401Return">Expected annual return (%)</label>
+    <input id="k401Return" type="number" min="0" max="100" step="0.1" value="7" />
+  </div>
+  <div class="tool-field tool-field--inline">
+    <label for="k401Years">Years to project</label>
+    <input id="k401Years" type="number" min="1" max="50" step="1" value="30" />
+  </div>
+
+  <fieldset class="k401-loan">
+    <legend>
+      <label class="k401-loan-toggle">
+        <input id="k401LoanOn" type="checkbox" checked />
+        Compare a 401(k) loan
+      </label>
+    </legend>
+    <div id="k401LoanFields">
+      <p class="tool-hint">
+        The loan comes out of the invested balance. You repay it monthly at the APR you set;
+        principal <em>and</em> interest go back into the 401(k) and then earn the expected return.
+        Cash for those payments is assumed to come from outside the plan (typically paycheck).
+      </p>
+      <div class="tool-field tool-field--inline">
+        <label for="k401LoanAmount">Loan amount ($)</label>
+        <input id="k401LoanAmount" type="number" min="0" max="1000000000000" step="100" value="20000" />
+      </div>
+      <div class="tool-field tool-field--inline">
+        <label for="k401LoanApr">Loan APR (%)</label>
+        <input id="k401LoanApr" type="number" min="0" max="100" step="0.1" value="8" />
+      </div>
+      <div class="tool-field tool-field--inline">
+        <label for="k401LoanTerm">Repay over (years)</label>
+        <input id="k401LoanTerm" type="number" min="1" max="15" step="1" value="5" />
+      </div>
+      <div class="tool-field tool-field--inline">
+        <label for="k401LoanStart">Start after year</label>
+        <input id="k401LoanStart" type="number" min="0" max="49" step="1" value="0" />
+      </div>
+      <p class="tool-hint">
+        Typical IRS cap is the lesser of 50% of the vested balance or $50,000, repaid within 5 years
+        (up to 15 for a primary home). 0 = take the loan now.
+      </p>
+    </div>
+  </fieldset>
+
+  <p id="k401Status" class="tool-status" role="status" aria-live="polite"></p>
+  <div id="k401Summary" class="tool-summary" aria-live="polite"></div>
+
+  <div class="tool-chart-wrap ic-chart-wrap">
+    <canvas
+      id="k401Chart"
+      width="720"
+      height="360"
+      role="application"
+      tabindex="0"
+      aria-label="401(k) balance with and without a loan. Drag or hover to inspect a year."
+    ></canvas>
+    <p id="k401ChartReadout" class="ic-chart-readout" hidden></p>
+    <p id="k401ChartAnnounce" class="ic-chart-announce" aria-live="polite"></p>
+  </div>
+  <p class="tool-hint ic-chart-hint">Drag or hover the chart to compare both balances in any year.</p>
+
+  <div id="k401TableWrap" class="ic-table-wrap k401-table-wrap" hidden>
+    <p class="tool-hint">Year-end invested 401(k) balance.</p>
+    <div class="ic-table-scroll">
+      <table class="ic-table">
+        <thead>
+          <tr>
+            <th scope="col">Year</th>
+            <th scope="col">Without loan</th>
+            <th id="k401HeadWith" scope="col">With loan</th>
+            <th id="k401HeadLoan" scope="col">Loan remaining</th>
+          </tr>
+        </thead>
+        <tbody id="k401TableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tool-actions">
+    <button type="button" id="k401Reset" class="tool-button--secondary">Reset example</button>
+  </div>
+</div>
+
+<script src="/js/k401-growth.js"></script>
