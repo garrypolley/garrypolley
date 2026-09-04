@@ -88,14 +88,20 @@
     if (!Number.isFinite(input.employeeAnnual) || input.employeeAnnual < 0) {
       return "Employee contribution must be zero or greater.";
     }
-    if (!Number.isFinite(input.salary) || input.salary < 0) {
-      return "Salary must be zero or greater.";
-    }
-    if (!Number.isFinite(input.matchRatePct) || input.matchRatePct < 0 || input.matchRatePct > MAX_RATE) {
-      return "Match rate must be between 0 and 100%.";
-    }
-    if (!Number.isFinite(input.matchCapPct) || input.matchCapPct < 0 || input.matchCapPct > MAX_RATE) {
-      return "Match cap must be between 0 and 100% of salary.";
+    if (Number.isFinite(input.employerAnnual)) {
+      if (input.employerAnnual < 0) {
+        return "Employer contribution must be zero or greater.";
+      }
+    } else {
+      if (!Number.isFinite(input.salary) || input.salary < 0) {
+        return "Salary must be zero or greater.";
+      }
+      if (!Number.isFinite(input.matchRatePct) || input.matchRatePct < 0 || input.matchRatePct > MAX_RATE) {
+        return "Match rate must be between 0 and 100%.";
+      }
+      if (!Number.isFinite(input.matchCapPct) || input.matchCapPct < 0 || input.matchCapPct > MAX_RATE) {
+        return "Match cap must be between 0 and 100% of salary.";
+      }
     }
     if (!Number.isFinite(input.returnPct) || input.returnPct < 0 || input.returnPct > MAX_RATE) {
       return "Expected return must be between 0 and 100%.";
@@ -142,12 +148,9 @@
     var err = validate(input);
     if (err) return { ok: false, error: err };
 
-    var employerAnnual = employerMatch(
-      input.employeeAnnual,
-      input.salary,
-      input.matchRatePct,
-      input.matchCapPct
-    );
+    var employerAnnual = Number.isFinite(input.employerAnnual)
+      ? input.employerAnnual
+      : employerMatch(input.employeeAnnual, input.salary, input.matchRatePct, input.matchCapPct);
     var months = input.years * 12;
     var r = input.returnPct / 100 / 12;
     var empM = input.employeeAnnual / 12;
@@ -336,25 +339,22 @@
   if (!utils) return;
 
   var balanceEl = document.getElementById("k401Balance");
-  var salaryEl = document.getElementById("k401Salary");
   var employeeEl = document.getElementById("k401Employee");
+  var employerEl = document.getElementById("k401Employer");
   var ageBandEl = document.getElementById("k401AgeBand");
-  var matchRateEl = document.getElementById("k401MatchRate");
-  var matchCapEl = document.getElementById("k401MatchCap");
   var returnEl = document.getElementById("k401Return");
+  var returnValEl = document.getElementById("k401ReturnVal");
   var yearsEl = document.getElementById("k401Years");
   var loanOnEl = document.getElementById("k401LoanOn");
   var loanFields = document.getElementById("k401LoanFields");
   var loanAmountEl = document.getElementById("k401LoanAmount");
   var loanAprEl = document.getElementById("k401LoanApr");
+  var aprValEl = document.getElementById("k401AprVal");
+  var aprSliderWrap = document.getElementById("k401AprSliderWrap");
   var loanTermEl = document.getElementById("k401LoanTerm");
-  var loanStartEl = document.getElementById("k401LoanStart");
   var loanRepeatEl = document.getElementById("k401LoanRepeat");
-  var loanRepeatYearsEl = document.getElementById("k401LoanRepeatYears");
-  var repeatFields = document.getElementById("k401RepeatFields");
   var statusEl = document.getElementById("k401Status");
   var summaryEl = document.getElementById("k401Summary");
-  var matchNoteEl = document.getElementById("k401MatchNote");
   var chartCanvas = document.getElementById("k401Chart");
   var chartReadoutEl = document.getElementById("k401ChartReadout");
   var chartAnnounceEl = document.getElementById("k401ChartAnnounce");
@@ -365,21 +365,17 @@
   var COLOR_YES = "#b85c38";
 
   var DEFAULTS = {
-    balance: 80000,
-    salary: 120000,
+    balance: 150000,
     employee: utils.LIMITS_2026.employee,
+    employer: 0,
     ageBand: "base",
-    matchRate: 50,
-    matchCap: 6,
     returnPct: 7,
     years: 30,
     loanOn: true,
-    loanAmount: 20000,
+    loanAmount: 50000,
     loanApr: 8,
     loanTerm: 5,
-    loanStart: 0,
     loanRepeat: true,
-    loanRepeatYears: 5,
   };
 
   var lastResult = null;
@@ -406,33 +402,52 @@
   }
 
   function setLoanFieldsOpen(on) {
-    if (!loanFields) return;
-    loanFields.hidden = !on;
-    setRepeatFieldsOpen(on && loanRepeatEl.checked);
+    if (loanFields) loanFields.hidden = !on;
+    if (aprSliderWrap) aprSliderWrap.hidden = !on;
   }
 
-  function setRepeatFieldsOpen(on) {
-    if (!repeatFields) return;
-    repeatFields.hidden = !on;
+  function formatPct(n) {
+    if (!Number.isFinite(n)) return "—";
+    return n.toFixed(1) + "%";
+  }
+
+  function syncSliderLabels() {
+    if (returnValEl) returnValEl.textContent = formatPct(parseNumber(returnEl, DEFAULTS.returnPct));
+    if (aprValEl) aprValEl.textContent = formatPct(parseNumber(loanAprEl, DEFAULTS.loanApr));
+  }
+
+  function nudgeInput(input, delta) {
+    if (!input) return;
+    var min = parseFloat(input.min);
+    var max = parseFloat(input.max);
+    var step = Math.abs(delta) || parseFloat(input.step) || 1;
+    var current = parseFloat(input.value);
+    if (!isFinite(min)) min = 0;
+    if (!isFinite(max)) max = 1e12;
+    if (!isFinite(current)) current = 0;
+    var next = current + delta;
+    if (next < min) next = min;
+    if (next > max) next = max;
+    if (step >= 1) next = Math.round(next);
+    input.value = String(next);
   }
 
   function readInput() {
+    var term = parseIntField(loanTermEl, DEFAULTS.loanTerm);
     return {
       balance: parseNumber(balanceEl, NaN),
-      salary: parseNumber(salaryEl, NaN),
+      employerAnnual: parseNumber(employerEl, 0),
       employeeAnnual: parseNumber(employeeEl, NaN),
       ageBand: ageBandEl.value,
-      matchRatePct: parseNumber(matchRateEl, NaN),
-      matchCapPct: parseNumber(matchCapEl, NaN),
       returnPct: parseNumber(returnEl, NaN),
       years: parseIntField(yearsEl, NaN),
       loanEnabled: loanOnEl.checked,
       loanAmount: parseNumber(loanAmountEl, NaN),
       loanApr: parseNumber(loanAprEl, NaN),
-      loanTermYears: parseIntField(loanTermEl, NaN),
-      loanStartYear: parseIntField(loanStartEl, NaN),
+      loanTermYears: term,
+      loanStartYear: 0,
       loanRepeat: loanRepeatEl.checked,
-      loanRepeatYears: parseIntField(loanRepeatYearsEl, NaN),
+      loanRepeatYears: term,
     };
   }
 
@@ -448,20 +463,6 @@
     item.appendChild(labelEl);
     item.appendChild(valueEl);
     return item;
-  }
-
-  function updateMatchNote() {
-    var input = readInput();
-    var match = utils.employerMatch(input.employeeAnnual, input.salary, input.matchRatePct, input.matchCapPct);
-    if (!Number.isFinite(match)) {
-      matchNoteEl.textContent = "";
-      return;
-    }
-    matchNoteEl.textContent =
-      "Estimated employer match: " +
-      utils.formatMoney(match) +
-      "/year  ·  2026 employee max for this age band: " +
-      utils.formatMoney(utils.employeeMax(input.ageBand));
   }
 
   function ensureCanvasContext() {
@@ -794,7 +795,7 @@
   }
 
   function render() {
-    updateMatchNote();
+    syncSliderLabels();
     var input = readInput();
     var result = utils.simulate(input);
     lastResult = result;
@@ -826,8 +827,8 @@
       summaryEl.appendChild(
         summaryItem("Interest paid to yourself", utils.formatMoney(result.interestPaid, 2))
       );
-    } else {
-      summaryEl.appendChild(summaryItem("Employer match / year", utils.formatMoney(result.employerAnnual)));
+    } else if (result.employerAnnual > 0) {
+      summaryEl.appendChild(summaryItem("Employer / year", utils.formatMoney(result.employerAnnual)));
     }
 
     drawChart(result);
@@ -842,20 +843,16 @@
 
   function resetDefaults() {
     balanceEl.value = String(DEFAULTS.balance);
-    salaryEl.value = String(DEFAULTS.salary);
     employeeEl.value = String(DEFAULTS.employee);
+    employerEl.value = String(DEFAULTS.employer);
     ageBandEl.value = DEFAULTS.ageBand;
-    matchRateEl.value = String(DEFAULTS.matchRate);
-    matchCapEl.value = String(DEFAULTS.matchCap);
     returnEl.value = String(DEFAULTS.returnPct);
     yearsEl.value = String(DEFAULTS.years);
     loanOnEl.checked = DEFAULTS.loanOn;
     loanAmountEl.value = String(DEFAULTS.loanAmount);
     loanAprEl.value = String(DEFAULTS.loanApr);
     loanTermEl.value = String(DEFAULTS.loanTerm);
-    loanStartEl.value = String(DEFAULTS.loanStart);
     loanRepeatEl.checked = DEFAULTS.loanRepeat;
-    loanRepeatYearsEl.value = String(DEFAULTS.loanRepeatYears);
     setLoanFieldsOpen(DEFAULTS.loanOn);
     scrubIndex = null;
     render();
@@ -867,43 +864,33 @@
     scheduleRender();
   }
 
-  root.querySelectorAll("[data-k401-max]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      ageBandEl.value = btn.getAttribute("data-k401-max");
-      applyMaxContribution();
-    });
-  });
+  document.getElementById("k401UseMax").addEventListener("click", applyMaxContribution);
 
-  ageBandEl.addEventListener("change", function () {
-    updateMatchNote();
-    scheduleRender();
-  });
+  ageBandEl.addEventListener("change", scheduleRender);
   loanOnEl.addEventListener("change", function () {
     setLoanFieldsOpen(loanOnEl.checked);
     scheduleRender();
   });
-  loanRepeatEl.addEventListener("change", function () {
-    setRepeatFieldsOpen(loanOnEl.checked && loanRepeatEl.checked);
-    scheduleRender();
-  });
-  document.getElementById("k401RepeatMatchTerm").addEventListener("click", function () {
-    loanRepeatYearsEl.value = String(parseIntField(loanTermEl, DEFAULTS.loanTerm));
-    scheduleRender();
+  loanRepeatEl.addEventListener("change", scheduleRender);
+
+  root.querySelectorAll(".k401-nudge").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var target = document.getElementById(btn.getAttribute("data-for"));
+      var delta = parseFloat(btn.getAttribute("data-delta"));
+      nudgeInput(target, delta);
+      scheduleRender();
+    });
   });
 
   [
     balanceEl,
-    salaryEl,
     employeeEl,
-    matchRateEl,
-    matchCapEl,
+    employerEl,
     returnEl,
     yearsEl,
     loanAmountEl,
     loanAprEl,
     loanTermEl,
-    loanStartEl,
-    loanRepeatYearsEl,
   ].forEach(function (el) {
     el.addEventListener("input", scheduleRender);
     el.addEventListener("change", scheduleRender);

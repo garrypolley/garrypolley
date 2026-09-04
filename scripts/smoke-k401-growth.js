@@ -74,6 +74,20 @@ check("validate rejects out-of-range years and loan start", function () {
   assert.strictEqual(utils.validate(baseInput()), null);
 });
 
+check("flat employerAnnual of 0 skips the salary-match formula", function () {
+  var result = utils.simulate(
+    baseInput({
+      employerAnnual: 0,
+      salary: 120000,
+      matchRatePct: 50,
+      matchCapPct: 6,
+      loanEnabled: false,
+    })
+  );
+  assert.ok(result.ok);
+  assert.strictEqual(result.employerAnnual, 0);
+});
+
 check("no-loan series grows and ends above the starting balance", function () {
   var result = utils.simulate(baseInput({ loanEnabled: false }));
   assert.ok(result.ok);

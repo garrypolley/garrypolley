@@ -1,45 +1,47 @@
 <div class="tool k401-growth" id="k401GrowthTool">
-  <div class="tool-field tool-field--inline">
-    <label for="k401Balance">Current balance ($)</label>
-    <input id="k401Balance" type="number" min="0" max="1000000000000" step="100" value="80000" />
+  <div class="k401-stepper">
+    <label for="k401Balance">Current balance</label>
+    <div class="k401-stepper-row">
+      <button type="button" class="k401-nudge" data-for="k401Balance" data-delta="-10000" aria-label="Decrease balance by $10,000">−</button>
+      <input id="k401Balance" type="number" inputmode="numeric" min="0" max="1000000000000" step="10000" value="150000" />
+      <button type="button" class="k401-nudge" data-for="k401Balance" data-delta="10000" aria-label="Increase balance by $10,000">+</button>
+    </div>
+    <p class="tool-hint">Steps of $10,000. Tap the number to type an exact amount.</p>
   </div>
-  <div class="tool-field tool-field--inline">
-    <label for="k401Salary">Salary ($ / year)</label>
-    <input id="k401Salary" type="number" min="0" max="1000000000000" step="1000" value="120000" />
+
+  <div class="k401-stepper">
+    <label for="k401Employee">Your contribution / year</label>
+    <div class="k401-stepper-row">
+      <button type="button" class="k401-nudge" data-for="k401Employee" data-delta="-1000" aria-label="Decrease contribution by $1,000">−</button>
+      <input id="k401Employee" type="number" inputmode="numeric" min="0" max="1000000000000" step="1000" value="24500" />
+      <button type="button" class="k401-nudge" data-for="k401Employee" data-delta="1000" aria-label="Increase contribution by $1,000">+</button>
+    </div>
+    <div class="k401-contrib-extras">
+      <select id="k401AgeBand" aria-label="Age band for IRS maximum">
+        <option value="base" selected>Under 50 — max $24,500</option>
+        <option value="catchup">50–59 or 64+ — max $32,500</option>
+        <option value="super">Ages 60–63 — max $35,750</option>
+      </select>
+      <button type="button" id="k401UseMax" class="tool-button--secondary">Use IRS max</button>
+    </div>
   </div>
-  <div class="tool-field tool-field--inline">
-    <label for="k401Employee">Employee contribution ($ / year)</label>
-    <input id="k401Employee" type="number" min="0" max="1000000000000" step="100" value="24500" />
+
+  <div class="k401-stepper">
+    <label for="k401Employer">Employer contribution / year</label>
+    <div class="k401-stepper-row">
+      <button type="button" class="k401-nudge" data-for="k401Employer" data-delta="-1000" aria-label="Decrease employer contribution by $1,000">−</button>
+      <input id="k401Employer" type="number" inputmode="numeric" min="0" max="1000000000000" step="1000" value="0" />
+      <button type="button" class="k401-nudge" data-for="k401Employer" data-delta="1000" aria-label="Increase employer contribution by $1,000">+</button>
+    </div>
   </div>
-  <div class="tool-field tool-field--inline">
-    <label for="k401AgeBand">Age band (2026 IRS max)</label>
-    <select id="k401AgeBand">
-      <option value="base" selected>Under 50 — $24,500</option>
-      <option value="catchup">50–59 or 64+ — $32,500</option>
-      <option value="super">Ages 60–63 — $35,750</option>
-    </select>
-  </div>
-  <div class="tool-actions k401-max-actions">
-    <button type="button" class="tool-button--secondary" data-k401-max="base">Max $24,500</button>
-    <button type="button" class="tool-button--secondary" data-k401-max="catchup">Age 50+ $32,500</button>
-    <button type="button" class="tool-button--secondary" data-k401-max="super">Ages 60–63 $35,750</button>
-  </div>
-  <div class="tool-field tool-field--inline">
-    <label for="k401MatchRate">Employer match (%)</label>
-    <input id="k401MatchRate" type="number" min="0" max="100" step="1" value="50" />
-  </div>
-  <div class="tool-field tool-field--inline">
-    <label for="k401MatchCap">…of the first % of salary</label>
-    <input id="k401MatchCap" type="number" min="0" max="100" step="1" value="6" />
-  </div>
-  <p id="k401MatchNote" class="tool-hint"></p>
-  <div class="tool-field tool-field--inline">
-    <label for="k401Return">Expected annual return (%)</label>
-    <input id="k401Return" type="number" min="0" max="100" step="0.1" value="7" />
-  </div>
-  <div class="tool-field tool-field--inline">
+
+  <div class="k401-stepper">
     <label for="k401Years">Years to project</label>
-    <input id="k401Years" type="number" min="1" max="50" step="1" value="30" />
+    <div class="k401-stepper-row">
+      <button type="button" class="k401-nudge" data-for="k401Years" data-delta="-5" aria-label="Decrease years by 5">−</button>
+      <input id="k401Years" type="number" inputmode="numeric" min="1" max="50" step="5" value="30" />
+      <button type="button" class="k401-nudge" data-for="k401Years" data-delta="5" aria-label="Increase years by 5">+</button>
+    </div>
   </div>
 
   <fieldset class="k401-loan">
@@ -51,47 +53,56 @@
     </legend>
     <div id="k401LoanFields">
       <p class="tool-hint">
-        The loan comes out of the invested balance. You repay it monthly at the APR you set;
-        principal <em>and</em> interest go back into the 401(k) and then earn the expected return.
-        Cash for those payments is assumed to come from outside the plan (typically paycheck).
+        The loan leaves the market. You repay it from your paycheck; principal and interest go back
+        into the 401(k) and then earn the expected return.
       </p>
-      <div class="tool-field tool-field--inline">
-        <label for="k401LoanAmount">Loan amount ($)</label>
-        <input id="k401LoanAmount" type="number" min="0" max="1000000000000" step="100" value="20000" />
+      <div class="k401-stepper">
+        <label for="k401LoanAmount">Loan amount</label>
+        <div class="k401-stepper-row">
+          <button type="button" class="k401-nudge" data-for="k401LoanAmount" data-delta="-5000" aria-label="Decrease loan by $5,000">−</button>
+          <input id="k401LoanAmount" type="number" inputmode="numeric" min="0" max="1000000000000" step="5000" value="50000" />
+          <button type="button" class="k401-nudge" data-for="k401LoanAmount" data-delta="5000" aria-label="Increase loan by $5,000">+</button>
+        </div>
       </div>
-      <div class="tool-field tool-field--inline">
-        <label for="k401LoanApr">Loan APR (%)</label>
-        <input id="k401LoanApr" type="number" min="0" max="100" step="0.1" value="8" />
-      </div>
-      <div class="tool-field tool-field--inline">
+      <div class="k401-stepper">
         <label for="k401LoanTerm">Repay over (years)</label>
-        <input id="k401LoanTerm" type="number" min="1" max="15" step="1" value="5" />
+        <div class="k401-stepper-row">
+          <button type="button" class="k401-nudge" data-for="k401LoanTerm" data-delta="-1" aria-label="Decrease loan term by 1 year">−</button>
+          <input id="k401LoanTerm" type="number" inputmode="numeric" min="1" max="15" step="1" value="5" />
+          <button type="button" class="k401-nudge" data-for="k401LoanTerm" data-delta="1" aria-label="Increase loan term by 1 year">+</button>
+        </div>
       </div>
-      <div class="tool-field tool-field--inline">
-        <label for="k401LoanStart">Start after year</label>
-        <input id="k401LoanStart" type="number" min="0" max="49" step="1" value="0" />
-      </div>
-      <div class="tool-field tool-field--inline k401-repeat-row">
-        <label class="k401-loan-toggle" for="k401LoanRepeat">
-          <input id="k401LoanRepeat" type="checkbox" checked />
-          Repeat this loan
-        </label>
-      </div>
-      <div id="k401RepeatFields" class="tool-field tool-field--inline">
-        <label for="k401LoanRepeatYears">Every (years)</label>
-        <input id="k401LoanRepeatYears" type="number" min="1" max="50" step="1" value="5" />
-        <button type="button" id="k401RepeatMatchTerm" class="tool-button--secondary">Use loan term</button>
-      </div>
+      <label class="k401-loan-toggle k401-repeat-toggle">
+        <input id="k401LoanRepeat" type="checkbox" checked />
+        Repeat this loan each time it’s paid off
+      </label>
       <p class="tool-hint">
-        Typical IRS cap is the lesser of 50% of the vested balance or $50,000, repaid within 5 years
-        (up to 15 for a primary home). 0 = take the first loan now. Repeating takes another loan of the
-        same size on that cycle; if the interval is shorter than the term, loans can overlap.
+        Typical IRS cap is $50,000 or 50% of the vested balance, usually repaid in 5 years.
+        Repeating starts another loan of the same size when the term ends.
       </p>
     </div>
   </fieldset>
 
   <p id="k401Status" class="tool-status" role="status" aria-live="polite"></p>
   <div id="k401Summary" class="tool-summary" aria-live="polite"></div>
+
+  <div class="k401-tune" id="k401Tune">
+    <p class="k401-tune-label">Slide to compare</p>
+    <div class="k401-slider">
+      <div class="k401-slider-head">
+        <label for="k401Return">Expected 401(k) return</label>
+        <span id="k401ReturnVal">7.0%</span>
+      </div>
+      <input id="k401Return" type="range" min="0" max="15" step="0.5" value="7" />
+    </div>
+    <div class="k401-slider" id="k401AprSliderWrap">
+      <div class="k401-slider-head">
+        <label for="k401LoanApr">Loan APR</label>
+        <span id="k401AprVal">8.0%</span>
+      </div>
+      <input id="k401LoanApr" type="range" min="0" max="18" step="0.5" value="8" />
+    </div>
+  </div>
 
   <div class="tool-chart-wrap ic-chart-wrap">
     <canvas

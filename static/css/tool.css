@@ -940,12 +940,125 @@
   margin-top: 0.35rem;
 }
 
-.k401-growth .tool-field--inline input[type="number"] {
-  width: 8rem;
+.k401-growth .k401-stepper {
+  margin-bottom: 1.1rem;
 }
 
-.k401-growth .k401-max-actions {
-  margin-top: -0.25rem;
+.k401-growth .k401-stepper > label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+
+.k401-growth .k401-stepper-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  max-width: 24rem;
+}
+
+.k401-growth .k401-stepper-row input[type="number"] {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  font-size: 1.15rem;
+  padding: 0.65rem 0.6rem;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.k401-growth button.k401-nudge {
+  flex: 0 0 3rem;
+  min-height: 3rem;
+  padding: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: #f5f5f5;
+  color: #222;
+  border: 1px solid #999;
+  border-radius: 6px;
+}
+
+.k401-growth .k401-contrib-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+  max-width: 24rem;
+}
+
+.k401-growth .k401-contrib-extras select {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.k401-growth .k401-loan-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.k401-growth .k401-repeat-toggle {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.k401-growth .k401-tune {
+  margin: 1rem 0 0.75rem;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f7fafc;
+}
+
+.k401-growth .k401-tune-label {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #666;
+  font-weight: 600;
+}
+
+.k401-growth .k401-slider {
+  margin-bottom: 0.85rem;
+}
+
+.k401-growth .k401-slider:last-child {
+  margin-bottom: 0;
+}
+
+.k401-growth .k401-slider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.k401-growth .k401-slider-head label {
+  font-weight: 600;
+}
+
+.k401-growth .k401-slider-head span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #1a5f7a;
+}
+
+.k401-growth .k401-slider input[type="range"] {
+  width: 100%;
+  height: 2rem;
+  margin: 0;
+  accent-color: #2660ab;
+}
+
+.k401-growth .k401-slider[hidden] {
+  display: none;
 }
 
 .k401-growth .k401-loan {
