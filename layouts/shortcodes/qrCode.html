@@ -1,0 +1,64 @@
+<div class="tool qr-code" id="qrCodeTool">
+  <div class="tool-field">
+    <label for="qrText">Link or text</label>
+    <textarea id="qrText" rows="3" placeholder="https://garrypolley.com" autocomplete="off"></textarea>
+    <p class="tool-hint">Encoded in your browser. Nothing is uploaded or tracked.</p>
+  </div>
+
+  <div class="tool-field">
+    <label for="qrLabel">Label under the code</label>
+    <input id="qrLabel" type="text" maxlength="80" placeholder="Optional — my site, a menu, a wifi name" />
+  </div>
+
+  <div class="tool-field">
+    <label for="qrCenterText">Text in the middle</label>
+    <input id="qrCenterText" type="text" maxlength="18" placeholder="Optional — a short word or initials" />
+  </div>
+
+  <div class="tool-field">
+    <label for="qrLogo">Logo in the middle</label>
+    <input id="qrLogo" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+    <p class="tool-hint">PNG, JPEG, WebP, or GIF. Replaces the center text. Keep it small so phones can still scan.</p>
+    <button type="button" id="qrLogoClear" class="tool-button--secondary">Remove logo</button>
+  </div>
+
+  <div class="tool-field tool-field--inline">
+    <label for="qrLogoPct">Center size</label>
+    <input id="qrLogoPct" type="range" min="12" max="24" step="1" value="18" />
+    <span id="qrLogoPctVal">18%</span>
+  </div>
+
+  <div class="qr-colors">
+    <div class="tool-field tool-field--inline">
+      <label for="qrFg">Dots</label>
+      <input id="qrFg" type="color" value="#111111" />
+    </div>
+    <div class="tool-field tool-field--inline">
+      <label for="qrBg">Background</label>
+      <input id="qrBg" type="color" value="#ffffff" />
+    </div>
+    <div class="tool-field tool-field--inline">
+      <label for="qrSize">Size</label>
+      <select id="qrSize">
+        <option value="256">256 px</option>
+        <option value="384" selected>384 px</option>
+        <option value="512">512 px</option>
+        <option value="768">768 px</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tool-actions">
+    <button type="button" id="qrDownload" disabled>Download PNG</button>
+    <button type="button" id="qrReset" class="tool-button--secondary">Clear</button>
+  </div>
+
+  <p id="qrStatus" class="tool-status" role="status" aria-live="polite"></p>
+
+  <div id="qrPreview" class="qr-preview" hidden>
+    <canvas id="qrCanvas" width="384" height="384" aria-label="QR code preview"></canvas>
+  </div>
+</div>
+
+<script src="/js/vendor/qrcodegen.js"></script>
+<script src="/js/qr-code.js"></script>
