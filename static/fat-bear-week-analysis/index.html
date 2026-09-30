@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Was Backpack’s Fat Bear Week win too close to trust?</title>
+    <meta
+      name="description"
+      content="910 vs 89 Backpack finals were razor-thin. Historical Fat Bear Week turnout analysis — suspicion without proof from public tallies."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <main class="canvas">
+      <header class="stack-tight">
+        <figure class="hero-fig">
+          <img
+            src="https://media.explore.org/documents/89-1789765144853.png"
+            alt="89 Backpack, Fat Bear Week 2026 champion"
+            width="1200"
+            height="675"
+          />
+          <figcaption>
+            89 Backpack — Fat Bear Week 2026 champion. Photo:
+            <a href="https://media.explore.org/documents/89-1789765144853.png"
+              >explore.org media</a
+            >
+            ·
+            <a href="https://explore.org/fat-bear-week"
+              >Fat Bear Week on explore.org</a
+            >
+          </figcaption>
+        </figure>
+        <h1>Was Backpack’s win too close to trust?</h1>
+        <p>
+          Fat Bear Week 2026 finals came down to <strong>910</strong> vs
+          <strong>89 Backpack</strong>: Backpack 103,334 — 910 98,253. Margin
+          only <strong>5,081 votes</strong> (~2.5% of the pair). That
+          razor-thin finish made me suspicious — specifically that something
+          might have been off in the voting to push Backpack over the line.
+          Official bracket and results:
+          <a href="https://explore.org/fat-bear-week"
+            >explore.org/fat-bear-week</a
+          >.
+        </p>
+        <p>
+          I pulled multi-year pair totals (Wayback + live Results tables),
+          looked at same-day gaps, turnout vs each year’s opener, and
+          year-over-year shapes. Organizers
+          <a
+            href="https://www.theguardian.com/us-news/2022/oct/11/alaska-fat-bear-week-voting-scandal"
+            >did catch real stuffing in 2022</a
+          >
+          (~9k spam votes for Holly, discarded). On the public 2022–2026
+          numbers alone, though, I <strong>cannot prove</strong> fraud in the
+          2026 final — close races and midweek turnout dips also show up in
+          clean-looking years.
+        </p>
+        <aside class="callout warning">
+          <strong>Bottom line</strong>
+          <p>
+            Suspicion stands; proof does not — at least not from these
+            published tallies. But 2022’s ~9k discarded spam already exceeds
+            the 2026 margin in votes and as a share of its matchup. Given that
+            precedent and this year’s razor-thin final, Fat Bear Week / Katmai
+            / explore.org should recount and analyze the 2026 finals votes and
+            publish what they find — the way they did in 2022.
+          </p>
+        </aside>
+      </header>
+
+      <section class="stats">
+        <article>
+          <strong>103,334</strong>
+          <span>Backpack (finals)</span>
+        </article>
+        <article>
+          <strong>98,253</strong>
+          <span>910 (finals)</span>
+        </article>
+        <article>
+          <strong>5,081</strong>
+          <span>Margin</span>
+        </article>
+        <article>
+          <strong>2022</strong>
+          <span>Only confirmed stuffing year</span>
+        </article>
+      </section>
+
+      <aside class="callout danger">
+        <strong>Documented fraud: 2022 semi-final (context)</strong>
+        <p>
+          Official cleaned totals after discard: 747 37,940 vs Holly 30,430
+          (pair 68,370). Guardian: ~9,000 fake Holly votes discarded — larger
+          than the entire 2026 finals margin (5,081 / 2.5% of pair). Source:
+          <a
+            href="https://www.theguardian.com/us-news/2022/oct/11/alaska-fat-bear-week-voting-scandal"
+            >The Guardian, 11 Oct 2022</a
+          >. Organizers can detect stuffing and publish corrections. No such
+          report yet for 2026 — and this year’s final is thin enough that spam
+          of that size would have flipped it.
+        </p>
+      </aside>
+
+      <label class="view-row">
+        <span>Chart view</span>
+        <select id="yearView" aria-label="Chart view year filter">
+          <option value="all">All years (2022–2026)</option>
+          <option value="2022">2022 only</option>
+          <option value="2023">2023 only</option>
+          <option value="2024">2024 only</option>
+          <option value="2025">2025 only</option>
+          <option value="2026">2026 only</option>
+        </select>
+      </label>
+
+      <hr />
+
+      <section>
+        <h2>Champions week over week — who won, and by how much</h2>
+        <aside class="callout info">
+          <p>
+            <strong>What this shows:</strong> Each Fat Bear Week champion’s
+            share of the finals pair (winner ÷ total), then absolute margin
+            and margin as % of pair. Chronological: 2022 left → 2026 right.
+            Dashed line on the first chart is 50% — a coin flip.
+          </p>
+        </aside>
+        <div class="chart-frame">
+          <canvas id="chartWinnerPct"></canvas>
+        </div>
+        <div class="chart-pair" style="margin-top: 1rem">
+          <div class="chart-frame">
+            <canvas id="chartMarginVotes"></canvas>
+          </div>
+          <div class="chart-frame">
+            <canvas id="chartMarginPct"></canvas>
+          </div>
+        </div>
+        <div class="table-wrap" style="margin-top: 1rem">
+          <table>
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Winner</th>
+                <th>Winner votes</th>
+                <th>Loser</th>
+                <th>Loser votes</th>
+                <th>Margin</th>
+                <th>Margin % of pair</th>
+                <th>Winner share</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2022</td>
+                <td>747</td>
+                <td>68,105</td>
+                <td>901</td>
+                <td>56,876</td>
+                <td>11,229</td>
+                <td>9.0%</td>
+                <td>54.5%</td>
+              </tr>
+              <tr>
+                <td>2023</td>
+                <td>128 Grazer</td>
+                <td>108,321</td>
+                <td>32 Chunk</td>
+                <td>23,134</td>
+                <td>85,187</td>
+                <td>64.8%</td>
+                <td>82.4%</td>
+              </tr>
+              <tr>
+                <td>2024</td>
+                <td>128 Grazer</td>
+                <td>71,248</td>
+                <td>32 Chunk</td>
+                <td>30,468</td>
+                <td>40,780</td>
+                <td>40.1%</td>
+                <td>70.0%</td>
+              </tr>
+              <tr>
+                <td>2025</td>
+                <td>32 Chunk</td>
+                <td>96,350</td>
+                <td>856</td>
+                <td>63,725</td>
+                <td>32,625</td>
+                <td>20.4%</td>
+                <td>60.2%</td>
+              </tr>
+              <tr>
+                <td>2026</td>
+                <td>89 Backpack</td>
+                <td>103,334</td>
+                <td>910</td>
+                <td>98,253</td>
+                <td>5,081</td>
+                <td>2.5%</td>
+                <td>51.3%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <aside class="callout warning" style="margin-top: 1rem">
+          <strong>What’s anomalous</strong>
+          <p>
+            Votes are <strong>not</strong> usually a coin flip. Grazer took
+            82.4% of the 2023 finals pair and 70.0% in 2024. Chunk won 2025
+            with 60.2%. Even “close” 2022 still gave 747 a 54.5% share
+            (9.0% margin).
+          </p>
+          <p>
+            <strong>2026 / Backpack</strong> is the clear outlier: 51.3%
+            share, margin only 5,081 (2.5% of pair) — thinnest final in this
+            set. Next-closest champion share is 2022 / 747 at 54.5%.
+          </p>
+          <p>
+            A thin margin is suspicious-looking but not proof of fraud — it
+            can just mean a competitive final. Still, 2026 sits alone at the
+            bottom of the closeness scale.
+          </p>
+        </aside>
+
+        <h3 style="margin-top: 1.5rem">
+          Adult-bracket medians — typical races aren’t close either
+        </h3>
+        <aside class="callout info">
+          <p>
+            Median margin % across every adult-bracket matchup that year
+            (excludes Fat Bear Jr.). Dashed line = 10% “close race” flag.
+            Every year’s median sits well above 10% — blowouts are the norm.
+          </p>
+        </aside>
+        <div class="chart-frame">
+          <canvas id="chartAdultMedian"></canvas>
+        </div>
+        <div class="table-wrap" style="margin-top: 1rem">
+          <table>
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Adult matchups</th>
+                <th>Median margin % of pair</th>
+                <th>Under 10% margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2022</td>
+                <td>11</td>
+                <td>35.3%</td>
+                <td>2</td>
+              </tr>
+              <tr>
+                <td>2023</td>
+                <td>11</td>
+                <td>64.8%</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>2024</td>
+                <td>11</td>
+                <td>51.3%</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td>2025</td>
+                <td>11</td>
+                <td>40.4%</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>2026</td>
+                <td>15</td>
+                <td>50.3%</td>
+                <td>3</td>
+              </tr>
+              <tr>
+                <td><strong>All</strong></td>
+                <td><strong>59</strong></td>
+                <td><strong>~40–65% by year</strong></td>
+                <td><strong>6 (10%)</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <aside class="callout info" style="margin-top: 1rem">
+          <p>
+            Only <strong>6 of 59</strong> adult matchups (2022–2026) finished
+            under a 10% margin. Three of those six are in 2026 — including
+            Backpack’s semi vs Bucky (2.7%) and the finals vs 910 (2.5%).
+          </p>
+        </aside>
+        <aside class="callout danger" style="margin-top: 1rem">
+          <strong>2022 spam vs 2026 margin — why a recount is warranted</strong>
+          <p>
+            Documented 2022 Holly stuffing was ~9,000 fake votes (Guardian).
+            2026 finals margin is only 5,081 on a pair of 201,587 (~2.5%).
+            Absolute: ~9,000 &gt; 5,081 by ~3,919 votes (~1.8× the margin).
+          </p>
+          <p>
+            As a share of the matchup: ~9k was ~13.2% of the cleaned 2022
+            semi pair (68,370) / ~11.6% of the implied pre-discard pair
+            (77,370). Drop that same ~9k onto the 2026 finals pair and it is
+            still ~4.5% — larger than the 2.5% winning margin. Spam of that
+            size would have flipped Backpack vs 910.
+          </p>
+          <p>
+            Given how close 2026 was, and that organizers already found and
+            discarded stuffing once, Fat Bear Week / Katmai / explore.org
+            should re-check and analyze the 2026 finals ballots — same
+            integrity pass they ran in 2022 — and publish what they find.
+            Public tallies alone still do not prove 2026 fraud; they do show
+            the race is thin enough that known past spam would have decided it.
+          </p>
+          <div class="table-wrap" style="margin-top: 0.75rem">
+            <table>
+              <thead>
+                <tr>
+                  <th>Compare</th>
+                  <th>Votes</th>
+                  <th>% of pair</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>2022 Holly spam (Guardian ~9k)</td>
+                  <td>~9,000</td>
+                  <td>~11.6–13.2% of 2022 semi</td>
+                </tr>
+                <tr>
+                  <td>2026 finals margin (Backpack − 910)</td>
+                  <td>5,081</td>
+                  <td>2.5% of 201,587</td>
+                </tr>
+                <tr>
+                  <td>~9k spam as % of 2026 finals pair</td>
+                  <td>~9,000</td>
+                  <td>~4.5% of 201,587</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </aside>
+      </section>
+
+      <section>
+        <h2 id="openerTitle">How busy vs opener (all years)</h2>
+        <aside class="callout info">
+          <p>
+            <strong>How to read:</strong> Not raw counts. Each year scaled so
+            its own opening-day average pair total = 100. Later stages = % of
+            that opener. Guide line at 100 = same as opener. Grouped bars are
+            chronological: <strong>2022 left → 2026 right</strong>.
+          </p>
+        </aside>
+        <div class="chart-frame">
+          <canvas id="chartVsOpener"></canvas>
+        </div>
+        <p class="caption">index = 100 × (day avg ÷ opening-day avg)</p>
+      </section>
+
+      <section id="yoySection">
+        <h2 id="yoyTitle">Year-over-year vs prior year</h2>
+        <aside class="callout info">
+          <p>
+            <strong>How to read:</strong> At each stage: this year ÷ prior year
+            same stage. 100 = flat YoY. Bars left→right chronological (2023 vs
+            2022 first).
+          </p>
+        </aside>
+        <div class="chart-frame">
+          <canvas id="chartYoY"></canvas>
+        </div>
+        <p class="caption">
+          2025 Mid vs 2024 Mid (~255) is huge mainly because 2024 Mid was a
+          deep trough (~50k), not because 2025 Mid was absurd (~128k).
+        </p>
+      </section>
+
+      <aside class="callout info" id="yoyEmpty" hidden>
+        <strong>No YoY for 2022</strong>
+        <p>
+          2022 is the first year with raw matchup tables here — nothing prior
+          to compare against. Switch to All years or 2023+ for YoY bars.
+        </p>
+      </aside>
+
+      <section>
+        <h2 id="gapTitle">Same-day missing votes (all dates, oldest → newest)</h2>
+        <p class="hint">
+          Gap = max pair − min pair that day, as % of max. Dates run left →
+          right chronologically. High gap can mean poll abandonment; alone ≠
+          stuffing.
+        </p>
+        <div class="chart-frame chart-frame--tall">
+          <canvas id="chartGaps"></canvas>
+        </div>
+      </section>
+
+      <section class="two-col">
+        <div class="card">
+          <h3>What the data can and can’t say</h3>
+          <p>
+            <strong>2026 finals suspicion.</strong> Backpack beat 910 by
+            5,081 votes. Close enough to raise an eyebrow — not close enough,
+            by itself, to prove stuffing.
+          </p>
+          <p>
+            <strong>What historical patterns show.</strong> Midweek dips and
+            finals rebounds recur. Same-day gaps usually stay modest on
+            two-poll days. 2022 proves fraud is possible — and that cleaned
+            Results pages won’t show the attack spike.
+          </p>
+          <p>
+            <strong>Waiting on organizers.</strong> Without a Fat Bear Week /
+            Katmai / explore.org report (like 2022), public tallies alone don’t
+            confirm 2026 fraud.
+          </p>
+        </div>
+        <div class="card">
+          <h3>2022 Oct 9 math check</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Version</th>
+                  <th>747</th>
+                  <th>Holly</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Archived official</td>
+                  <td>37,940</td>
+                  <td>30,430</td>
+                </tr>
+                <tr>
+                  <td>Implied pre-discard (~+9k Holly)</td>
+                  <td>37,940</td>
+                  <td>~39,430</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="caption">
+            Implication only — Guardian states ~9,000; pre-discard dump not on
+            Results page.
+          </p>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="sources">
+        <h2>Sources &amp; files</h2>
+        <p class="hint">
+          Secondary detail for verification. Primary story is above; links and
+          file paths live here.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Results snapshot</th>
+                <th>Repo CSV</th>
+                <th>Sum vs Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2022</td>
+                <td>
+                  <a
+                    href="https://web.archive.org/web/20221201003358/https://www.explore.org/fat-bear-week"
+                    >20221201003358</a
+                  >
+                </td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/data/2022_matchups.csv"
+                    >data/2022_matchups.csv</a
+                  >
+                </td>
+                <td>exact (post-discard)</td>
+              </tr>
+              <tr>
+                <td>2023</td>
+                <td>
+                  <a
+                    href="https://web.archive.org/web/20231201135955/https://www.explore.org/fat-bear-week"
+                    >20231201135955</a
+                  >
+                </td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/data/2023_matchups.csv"
+                    >data/2023_matchups.csv</a
+                  >
+                </td>
+                <td>+178</td>
+              </tr>
+              <tr>
+                <td>2024</td>
+                <td>
+                  <a
+                    href="https://web.archive.org/web/20241031053258/https://explore.org/fat-bear-week"
+                    >20241031053258</a
+                  >
+                </td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/data/2024_matchups.csv"
+                    >data/2024_matchups.csv</a
+                  >
+                </td>
+                <td>exact</td>
+              </tr>
+              <tr>
+                <td>2025</td>
+                <td>
+                  <a
+                    href="https://web.archive.org/web/20251001014537/https://explore.org/fat-bear-week"
+                    >20251001014537</a
+                  >
+                </td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/data/2025_matchups.csv"
+                    >data/2025_matchups.csv</a
+                  >
+                </td>
+                <td>−1,016</td>
+              </tr>
+              <tr>
+                <td>2026</td>
+                <td>
+                  <a href="https://explore.org/fat-bear-week">live explore.org</a>
+                </td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/data/2026_matchups.csv"
+                    >data/2026_matchups.csv</a
+                  >
+                </td>
+                <td>exact</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-wrap" style="margin-top: 1rem">
+          <table>
+            <thead>
+              <tr>
+                <th>File / page</th>
+                <th>Link</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Repository</td>
+                <td>
+                  <a href="https://github.com/garrypolley/fat-bear-week-analysis"
+                    >github.com/garrypolley/fat-bear-week-analysis</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>SOURCES.md</td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/SOURCES.md"
+                    >SOURCES.md</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>All matchups</td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/data/matchups_all_years.csv"
+                    >data/matchups_all_years.csv</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Daily integrity gaps</td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/data/daily_integrity.csv"
+                    >data/daily_integrity.csv</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Cursor canvas source</td>
+                <td>
+                  <a
+                    href="https://github.com/garrypolley/fat-bear-week-analysis/blob/main/canvas/fat-bear-week-voting.canvas.tsx"
+                    >canvas/fat-bear-week-voting.canvas.tsx</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Guardian 2022 scandal</td>
+                <td>
+                  <a
+                    href="https://www.theguardian.com/us-news/2022/oct/11/alaska-fat-bear-week-voting-scandal"
+                    >theguardian.com/…/alaska-fat-bear-week-voting-scandal</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Hall of Champions</td>
+                <td>
+                  <a href="https://explore.org/hall-of-champions"
+                    >explore.org/hall-of-champions</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Reed Quest CSVs (year-level)</td>
+                <td>
+                  <a
+                    href="https://github.com/data-at-reed-college/quest/tree/main/fat_bear_week/data"
+                    >data-at-reed-college/quest/…/fat_bear_week/data</a
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="caption">
+          Unit of analysis = pair total (votes A + votes B). explore.org does
+          not publish a matchup CSV; tables transcribed from live / Wayback
+          Results HTML. 2021 Wayback snapshot has no raw matchup table. This
+          page mirrors the Cursor canvas analysis.
+        </p>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

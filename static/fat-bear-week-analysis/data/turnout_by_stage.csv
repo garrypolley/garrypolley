@@ -1,0 +1,17 @@
+stage,year,day,avg_pair,min_pair,max_pair,gap,gap_pct_of_max,index_vs_opening,source_url,source_note
+opening,2026,2026-09-23,204480,182271,218068,35797,16.4,100.0,https://explore.org/fat-bear-week,Primary explore.org Results table
+next,2026,2026-09-24,164459,160775,167038,6263,3.7,80.4,https://explore.org/fat-bear-week,Primary explore.org Results table
+trough,2026,2026-09-25,130956,129589,132635,3046,2.3,64.0,https://explore.org/fat-bear-week,Primary explore.org Results table
+semis,2026,2026-09-28,151282,146813,155750,8937,5.7,74.0,https://explore.org/fat-bear-week,Primary explore.org Results table
+finals,2026,2026-09-29,201587,201587,201587,0,0.0,98.6,https://explore.org/fat-bear-week,Primary explore.org Results table
+opening,2024,2024-10-02,113724,111204,116243,5039,4.3,100.0,https://katmai-bearcams.fandom.com/wiki/2024_Fat_Bear_Week_-_10th_Anniversary_of_Brooks_River_Fat_Bear_Celebrations!,Wiki citing explore.org; finals also CNN
+next,2024,2024-10-04,88047,86388,89706,3318,3.7,77.4,https://katmai-bearcams.fandom.com/wiki/2024_Fat_Bear_Week_-_10th_Anniversary_of_Brooks_River_Fat_Bear_Celebrations!,Wiki citing explore.org; finals also CNN
+trough,2024,2024-10-05,50014,49401,50626,1225,2.4,44.0,https://katmai-bearcams.fandom.com/wiki/2024_Fat_Bear_Week_-_10th_Anniversary_of_Brooks_River_Fat_Bear_Celebrations!,Wiki citing explore.org; finals also CNN
+semis,2024,2024-10-07,79072,78589,79555,966,1.2,69.5,https://katmai-bearcams.fandom.com/wiki/2024_Fat_Bear_Week_-_10th_Anniversary_of_Brooks_River_Fat_Bear_Celebrations!,Wiki citing explore.org; finals also CNN
+finals,2024,2024-10-08,101716,101716,101716,0,0.0,89.4,https://katmai-bearcams.fandom.com/wiki/2024_Fat_Bear_Week_-_10th_Anniversary_of_Brooks_River_Fat_Bear_Celebrations!,Wiki citing explore.org; finals also CNN
+opening,2025,2025-09-23,157628,156356,158901,2545,1.6,100.0,https://explore.org/fat-bear-week,PROVISIONAL: search-indexed 2025 Results HTML; live page now 2026
+next,2025,2025-09-24,176506,175024,177987,2963,1.7,112.0,https://explore.org/fat-bear-week,PROVISIONAL: search-indexed 2025 Results HTML; live page now 2026
+mid,2025,2025-09-25,152483,150555,154411,3856,2.5,96.7,https://explore.org/fat-bear-week,PROVISIONAL: search-indexed 2025 Results HTML; live page now 2026
+trough,2025,2025-09-26,127631,125724,129538,3814,2.9,81.0,https://explore.org/fat-bear-week,PROVISIONAL: search-indexed 2025 Results HTML; live page now 2026
+semis,2025,2025-09-29,116283,113395,119171,5776,4.8,73.8,https://explore.org/fat-bear-week,PROVISIONAL: search-indexed 2025 Results HTML; live page now 2026
+finals,2025,2025-09-30,160075,160075,160075,0,0.0,101.6,https://explore.org/fat-bear-week,PROVISIONAL: search-indexed 2025 Results HTML; live page now 2026
